@@ -184,7 +184,7 @@ const SNAPSHOT = {"updated": "2026-07-08", "score": 49.1, "label": "Neutral", "p
 const VN30 = ["ACB","BCM","BID","CTG","DGC","FPT","GAS","GVR","HDB","HPG","LPB","MBB","MSN","MWG","PLX","SAB","SHB","SSB","SSI","STB","TCB","TPB","VCB","VHM","VIB","VIC","VJC","VNM","VPB","VRE"];
 const RF_ANNUAL = 0.048;
 const API_DIRECT = "https://services.entrade.com.vn/chart-api/v2/ohlcs";
-const API_PROXY  = "/chart-api/v2/ohlcs"; // rewrite same-origin trên Vercel (vercel.json) — né CORS
+const API_PROXY  = "/api/chart"; // serverless function trên Vercel: né CORS + CDN cache 15' chống rate-limit
 const LABELS = [[25,"Extreme Fear"],[45,"Fear"],[55.0001,"Neutral"],[75,"Greed"],[101,"Extreme Greed"]];
 const HEXC = {"Extreme Fear":"#0b1220","Fear":"#41586e","Neutral":"#7b8ea1","Greed":"#0891b2","Extreme Greed":"#155e75"};
 function lbl(s){ for(const [t,n] of LABELS) if(s<t) return n; return "Extreme Greed"; }
@@ -229,14 +229,16 @@ const dstr = t => new Date((t+7*3600)*1000).toISOString().slice(0,10);
 /* ================== PIPELINE LIVE (mirror compute.py) ================== */
 async function fetchJSON(url){ const r=await fetch(url); if(!r.ok) throw new Error(url+" -> "+r.status); return r.json(); }
 async function liveCompute(API){
-  const now=Math.floor(Date.now()/1000)+86400;
+  // làm tròn mốc thời gian theo khối 15 phút -> URL ổn định -> CDN cache hit
+  const now=Math.floor((Date.now()/1000+86400)/900)*900;
   const f1=now-86400*915, f2=now-86400*497, f3=now-86400*370;
+  const U=(kind,rest)=>API.includes("/api/chart")?`${API}?kind=${kind}&${rest}`:`${API}/${kind}?${rest}`;
   const [vni,vn30,fut]=await Promise.all([
-    fetchJSON(`${API}/index?from=${f1}&to=${now}&symbol=VNINDEX&resolution=1D`),
-    fetchJSON(`${API}/index?from=${f1}&to=${now}&symbol=VN30&resolution=1D`),
-    fetchJSON(`${API}/derivative?from=${f3}&to=${now}&symbol=VN30F1M&resolution=1D`),
+    fetchJSON(U("index",`from=${f1}&to=${now}&symbol=VNINDEX&resolution=1D`)),
+    fetchJSON(U("index",`from=${f1}&to=${now}&symbol=VN30&resolution=1D`)),
+    fetchJSON(U("derivative",`from=${f3}&to=${now}&symbol=VN30F1M&resolution=1D`)),
   ]);
-  const stocks=await Promise.all(VN30.map(s=>fetchJSON(`${API}/stock?from=${f2}&to=${now}&symbol=${s}&resolution=1W`).then(j=>[s,j]).catch(()=>null)));
+  const stocks=await Promise.all(VN30.map(s=>fetchJSON(U("stock",`from=${f2}&to=${now}&symbol=${s}&resolution=1W`)).then(j=>[s,j]).catch(()=>null)));
   const dates=vni.t.map(dstr), c=vni.c, v=vni.v, n=c.length;
 
   // 1. momentum
