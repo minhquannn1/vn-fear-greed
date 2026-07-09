@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/chart-api/:path*",
+      "destination": "https://services.entrade.com.vn/chart-api/:path*"
+    }
+  ]
+}

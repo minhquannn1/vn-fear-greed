@@ -183,7 +183,8 @@ const SNAPSHOT = {"updated": "2026-07-08", "score": 49.1, "label": "Neutral", "p
 /* ================== HẰNG SỐ ================== */
 const VN30 = ["ACB","BCM","BID","CTG","DGC","FPT","GAS","GVR","HDB","HPG","LPB","MBB","MSN","MWG","PLX","SAB","SHB","SSB","SSI","STB","TCB","TPB","VCB","VHM","VIB","VIC","VJC","VNM","VPB","VRE"];
 const RF_ANNUAL = 0.048;
-const API = "https://services.entrade.com.vn/chart-api/v2/ohlcs";
+const API_DIRECT = "https://services.entrade.com.vn/chart-api/v2/ohlcs";
+const API_PROXY  = "/chart-api/v2/ohlcs"; // rewrite same-origin trên Vercel (vercel.json) — né CORS
 const LABELS = [[25,"Extreme Fear"],[45,"Fear"],[55.0001,"Neutral"],[75,"Greed"],[101,"Extreme Greed"]];
 const HEXC = {"Extreme Fear":"#0b1220","Fear":"#41586e","Neutral":"#7b8ea1","Greed":"#0891b2","Extreme Greed":"#155e75"};
 function lbl(s){ for(const [t,n] of LABELS) if(s<t) return n; return "Extreme Greed"; }
@@ -227,7 +228,7 @@ const dstr = t => new Date((t+7*3600)*1000).toISOString().slice(0,10);
 
 /* ================== PIPELINE LIVE (mirror compute.py) ================== */
 async function fetchJSON(url){ const r=await fetch(url); if(!r.ok) throw new Error(url+" -> "+r.status); return r.json(); }
-async function liveCompute(){
+async function liveCompute(API){
   const now=Math.floor(Date.now()/1000)+86400;
   const f1=now-86400*915, f2=now-86400*497, f3=now-86400*370;
   const [vni,vn30,fut]=await Promise.all([
@@ -546,7 +547,9 @@ function render(d, mode){
 (async()=>{
   if(SNAPSHOT) render(SNAPSHOT,"snapshot");
   try{
-    const live=await liveCompute();
+    let live;
+    try{ live=await liveCompute(API_PROXY); }   // ưu tiên proxy same-origin (Vercel)
+    catch(_){ live=await liveCompute(API_DIRECT); } // fallback gọi thẳng (localhost/file)
     render(live,"live");
   }catch(e){
     const el=document.getElementById("err");
