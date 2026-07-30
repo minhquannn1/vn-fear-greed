@@ -1,0 +1,26 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Engine unit tests
+        run: node tools/test-engine.js
+      - name: Render tests (dependency-free DOM shim)
+        run: node tools/test-render.js
+      - name: End-to-end against saved fixtures (offline, deterministic)
+        run: node tools/build-snapshot.js --fixtures ./fixtures --dry-run
+      - name: Syntax check browser bundles
+        run: |
+          node --check assets/engine.js
+          node --check assets/data.js
+          node --check assets/ui.js
+          node --check api/chart.js

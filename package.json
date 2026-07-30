@@ -1,0 +1,14 @@
+{
+  "name": "vn-fear-greed",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Chi so So hai & Tham lam TTCK Viet Nam",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "test": "node tools/test-engine.js && node tools/test-render.js",
+    "snapshot": "node tools/build-snapshot.js",
+    "snapshot:offline": "node tools/build-snapshot.js --fixtures ./fixtures --dry-run",
+    "standalone": "node tools/build-standalone.js",
+    "dev": "npx --yes serve ."
+  }
+}

@@ -1,0 +1,2287 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VN Fear &amp; Greed Index — Chỉ số Tham lam &amp; Sợ hãi TTCK Việt Nam</title>
+<meta name="description" content="Chỉ số Sợ hãi &amp; Tham lam thị trường chứng khoán Việt Nam. Không chỉ đưa ra con số — đưa ra câu trả lời rõ ràng: nên mua, nên chờ hay nên giảm tỷ trọng, kèm kế hoạch chia lô và điều kiện huỷ kèo.">
+<meta property="og:title" content="VN Fear &amp; Greed Index">
+<meta property="og:description" content="Thị trường đang sợ hãi hay tham lam? Có nên bắt đáy không? Câu trả lời rõ ràng, kèm bằng chứng lịch sử.">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#ffffff; --ink:#0b1220; --muted:#5b6b7c; --faint:#8fa0b3;
+    --line:#e3e9ef; --line2:#eef2f6; --wash:#f7f9fb;
+    --cyan:#0891b2; --cyan-deep:#155e75; --cyan-soft:#e8f7fb;
+    --buy:#0f766e; --buy-soft:#e6f5f2;
+    --sell:#b4442c; --sell-soft:#fdf0ec;
+    --warn:#b45309; --warn-soft:#fdf6e7;
+    --alert:#b91c1c; --alert-soft:#fdf2f2;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{background:var(--bg);-webkit-text-size-adjust:100%}
+  body{background:var(--bg);color:var(--ink);font-family:'Space Grotesk',-apple-system,'Segoe UI',sans-serif;line-height:1.55;font-size:15px}
+  .mono,.badge,.prev .t,.prev .v,.charttitle,.pill,.chip,.score-big,footer,.num,.kv b{font-family:'IBM Plex Mono',ui-monospace,'SF Mono',monospace}
+  .wrap{max-width:1180px;margin:0 auto;padding:32px 20px 72px}
+  a{color:var(--cyan);text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  header{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;border-bottom:3px solid var(--ink);padding-bottom:14px}
+  h1{font-size:clamp(22px,4vw,30px);font-weight:700;letter-spacing:-.02em}
+  h1 span{display:block;font-size:11px;font-weight:400;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-top:5px}
+  .badges{display:flex;align-items:stretch;flex-wrap:wrap}
+  .badge{font-size:11px;padding:6px 11px;border:1px solid var(--ink);color:var(--ink);letter-spacing:.05em;white-space:nowrap}
+  .badge+.badge{border-left:none}
+  .badge.live{background:var(--cyan);border-color:var(--cyan);color:#fff}
+  .badge.stale{background:var(--warn);border-color:var(--warn);color:#fff}
+  .badge.up{color:var(--buy)}
+  .badge.down{color:var(--sell)}
+
+  .note{padding:11px 14px;font-size:13px;border:1px solid var(--line);background:var(--wash);color:var(--muted);margin-top:14px}
+  .note.warn{background:var(--warn-soft);border-color:#e8cf9a;color:#7a4d08}
+  .note.err{background:var(--alert-soft);border-color:#e6b4b4;color:#8a2323}
+  .note[hidden]{display:none}
+
+  /* ---------------------------------------------------------- verdict hero */
+  .verdict{margin-top:20px;border:2px solid var(--ink)}
+  .verdict .vtop{padding:22px 24px;border-bottom:1px solid var(--line)}
+  .verdict.tone-buy .vtop{background:var(--buy-soft);border-bottom-color:#bcded7}
+  .verdict.tone-lean-buy .vtop{background:var(--cyan-soft);border-bottom-color:#bfe4ee}
+  .verdict.tone-neutral .vtop{background:var(--wash)}
+  .verdict.tone-lean-sell .vtop{background:var(--warn-soft);border-bottom-color:#e8cf9a}
+  .verdict.tone-sell .vtop{background:var(--sell-soft);border-bottom-color:#eec6ba}
+  .vkicker{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+  .vtitle{font-size:clamp(24px,4.6vw,38px);font-weight:700;letter-spacing:-.03em;line-height:1.12;margin-top:8px}
+  .verdict.tone-buy .vtitle{color:var(--buy)}
+  .verdict.tone-lean-buy .vtitle{color:var(--cyan-deep)}
+  .verdict.tone-lean-sell .vtitle{color:var(--warn)}
+  .verdict.tone-sell .vtitle{color:var(--sell)}
+  .vgist{font-size:15px;color:var(--ink);margin-top:9px;max-width:70ch}
+  .vquick{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));border-top:1px solid var(--line)}
+  .vq{padding:16px 24px;border-right:1px solid var(--line)}
+  .vq:last-child{border-right:none}
+  .vq .t{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+  .vq .v{font-family:'IBM Plex Mono',monospace;font-size:23px;font-weight:600;margin-top:3px;letter-spacing:-.02em}
+  .vq .s{font-size:12px;color:var(--muted);margin-top:1px}
+
+  /* ------------------------------------------------------------ confidence */
+  .confbox{border-top:1px solid var(--line);padding:16px 24px;background:var(--wash)}
+  .confhead{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap}
+  .confnum{font-family:'IBM Plex Mono',monospace;font-size:30px;font-weight:600;line-height:1;margin-top:4px;letter-spacing:-.02em}
+  .confpct{font-size:16px;color:var(--muted);margin-left:1px}
+  .conflabel{font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.12em;margin-left:10px;vertical-align:2px}
+  .confmeter{flex:1 1 240px;min-width:200px;height:10px;background:#dfe6ed;position:relative;margin-bottom:5px}
+  .confmeter b{display:block;height:100%;width:0;background:var(--cyan)}
+  .confmeter i{position:absolute;top:-4px;width:2px;height:18px;background:var(--sell);transform:translateX(-50%);left:0}
+  .confadvice{font-size:13.5px;margin-top:10px;font-weight:600}
+  .confparts{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px}
+  .cp{font-family:'IBM Plex Mono',monospace;font-size:10.5px;border:1px solid var(--line);background:#fff;padding:4px 8px;color:var(--muted)}
+  .cp b{color:var(--ink);font-weight:600}
+  .cp.low{border-color:#e6b4b4;background:var(--alert-soft)}
+  .confnote{font-size:12px;color:var(--muted);margin-top:9px;max-width:80ch}
+
+  .vbody{display:grid;grid-template-columns:1.05fr 1fr;border-top:1px solid var(--line)}
+  @media(max-width:900px){.vbody{grid-template-columns:1fr}}
+  .vcol{padding:20px 24px}
+  .vcol+.vcol{border-left:1px solid var(--line)}
+  @media(max-width:900px){.vcol+.vcol{border-left:none;border-top:1px solid var(--line)}}
+  .vh{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);margin-bottom:12px}
+  .whylist{list-style:none;font-size:13.5px;color:var(--ink)}
+  .whylist li{padding-left:16px;position:relative;margin-bottom:7px;color:var(--muted)}
+  .whylist li::before{content:'';position:absolute;left:0;top:9px;width:5px;height:5px;background:var(--cyan)}
+
+  .tranche{display:flex;gap:13px;padding:12px 0;border-top:1px dashed var(--line)}
+  .tranche:first-of-type{border-top:none;padding-top:0}
+  .tno{flex:0 0 44px;height:44px;border:1.5px solid var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;line-height:1}
+  .tno b{font-size:14px;font-weight:600}
+  .tno i{font-size:8.5px;font-style:normal;color:var(--muted);letter-spacing:.04em}
+  .tbody .tw{font-size:13.5px;font-weight:600}
+  .tbody .td{font-size:12.5px;color:var(--muted);margin-top:2px}
+
+  .stoplist{list-style:none;font-size:12.5px}
+  .stoplist li{padding:8px 0 8px 18px;position:relative;border-top:1px dashed var(--line);color:var(--muted)}
+  .stoplist li:first-child{border-top:none}
+  .stoplist li::before{content:'✕';position:absolute;left:0;top:8px;color:var(--sell);font-size:11px}
+
+  .levels{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin-top:14px}
+  .lv{background:#fff;padding:9px 10px}
+  .lv .t{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.06em;color:var(--faint);text-transform:uppercase}
+  .lv .v{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600;margin-top:2px}
+
+  /* --------------------------------------------------------------- panels */
+  .grid{display:grid;grid-template-columns:minmax(300px,1fr) 1.25fr;border:1px solid var(--line);border-top:none;margin-top:0}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}}
+  .panel{background:#fff;padding:24px}
+  .grid>.panel+.panel{border-left:1px solid var(--line)}
+  @media(max-width:900px){.grid>.panel+.panel{border-left:none;border-top:1px solid var(--line)}}
+  .sect{border:1px solid var(--line);border-top:none}
+  .sect-first{border-top:1px solid var(--line);margin-top:26px}
+  h2{font-size:19px;letter-spacing:-.015em;margin-bottom:8px}
+  .charttitle{font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;color:var(--faint);margin-bottom:12px;text-transform:uppercase;letter-spacing:.12em}
+  .lede{font-size:13.5px;color:var(--muted);max-width:78ch;margin-bottom:14px}
+
+  .gaugebox{display:flex;flex-direction:column;align-items:center}
+  .gauge-svg{width:100%;max-width:380px;display:block}
+  .score-big{font-size:56px;font-weight:600;margin-top:-84px;line-height:1}
+  .score-label{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.2em;margin-top:5px;color:var(--cyan)}
+  .prevrow{display:flex;gap:18px;margin-top:22px;flex-wrap:wrap;justify-content:center}
+  .prev{border-left:2px solid var(--line);padding-left:9px;min-width:78px}
+  .prev .t{font-size:9.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.07em}
+  .prev .v{font-size:15px;font-weight:600;margin-top:1px}
+
+  /* ----------------------------------------------------------- panic meter */
+  .panicwrap{margin-top:22px;width:100%;max-width:380px}
+  .panicbar{height:22px;background:var(--line2);position:relative;border:1px solid var(--line);overflow:hidden}
+  .panicbar b{display:block;height:100%;background:linear-gradient(90deg,var(--cyan) 0%,var(--warn) 55%,var(--alert) 100%);width:0}
+  .panicticks{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--faint);margin-top:3px}
+  .panicparts{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;margin-top:12px}
+  .pp{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11.5px;color:var(--muted);border-bottom:1px dotted var(--line);padding-bottom:3px}
+  .pp b{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--ink)}
+
+  /* ------------------------------------------------------------ components */
+  .comps{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));border:1px solid var(--line);border-top:none}
+  .comp{background:#fff;padding:20px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);margin-right:-1px;margin-bottom:-1px}
+  .comp .top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .comp h3{font-size:15px;font-weight:700;letter-spacing:-.01em}
+  .pill{font-size:9.5px;font-weight:600;padding:3px 7px;border:1px solid currentColor;text-transform:uppercase;letter-spacing:.07em;white-space:nowrap}
+  .comp .desc{font-size:12px;color:var(--muted);margin-top:5px;min-height:32px}
+  .comp .row{display:flex;align-items:flex-end;justify-content:space-between;margin-top:8px;gap:10px}
+  .comp .score{font-family:'IBM Plex Mono',monospace;font-size:27px;font-weight:600}
+  .spark{width:150px;height:40px}
+  .bar{height:3px;margin-top:11px;background:var(--line2);position:relative}
+  .bar b{display:block;height:100%;background:var(--cyan)}
+  .bar i{position:absolute;top:-4px;width:2px;height:11px;background:var(--ink);transform:translateX(-50%)}
+  .comp.off{opacity:.5}
+
+  /* ------------------------------------------------------------ base rates */
+  .tablewrap{overflow-x:auto;margin-top:6px}
+  table{border-collapse:collapse;width:100%;font-size:12.5px;min-width:640px}
+  th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line2);white-space:nowrap}
+  th{font-family:'IBM Plex Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);font-weight:600;border-bottom:1px solid var(--line)}
+  td:first-child,th:first-child{text-align:left;font-family:'IBM Plex Mono',monospace;font-weight:600}
+  tr.here{background:var(--cyan-soft)}
+  tr.here td{font-weight:600}
+  .pos{color:var(--buy)}
+  .neg{color:var(--sell)}
+  .thin{color:var(--faint);font-weight:400}
+
+  .kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin-top:12px}
+  .kv>div{background:#fff;padding:11px 13px}
+  .kv .t{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint)}
+  .kv b{display:block;font-size:17px;font-weight:600;margin-top:2px}
+
+  .chips{display:flex;flex-wrap:wrap}
+  .chip{background:#fff;border:1px solid var(--line);color:var(--muted);font-size:11px;padding:6px 12px;cursor:pointer;text-transform:uppercase;letter-spacing:.05em}
+  .chip+.chip{border-left:none}
+  .chip.on{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+  .chip:focus-visible{outline:2px solid var(--cyan);outline-offset:1px}
+
+  details{border-top:1px solid var(--line);padding:11px 0}
+  details:last-of-type{border-bottom:1px solid var(--line)}
+  details summary{cursor:pointer;font-weight:600;font-size:14px}
+  details p{font-size:13px;color:var(--muted);margin-top:7px;max-width:78ch}
+  details ul{font-size:13px;color:var(--muted);margin-top:7px;padding-left:20px;max-width:78ch}
+  details li{margin-bottom:4px}
+
+  footer{margin-top:26px;font-size:11px;color:var(--faint);border-top:3px solid var(--ink);padding-top:12px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .disclaimer{margin-top:18px;border:1px solid var(--line);background:var(--wash);padding:14px 16px;font-size:12px;color:var(--muted);max-width:none}
+  .disclaimer b{color:var(--ink)}
+
+  .skel{color:var(--faint)}
+  #progress{height:2px;background:var(--cyan);width:0;transition:width .3s ease;position:fixed;top:0;left:0;z-index:60}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<div class="wrap">
+
+  <header>
+    <h1>VN Fear &amp; Greed Index<span>Chỉ số Sợ hãi &amp; Tham lam — TTCK Việt Nam</span></h1>
+    <div class="badges">
+      <span class="badge" id="vniBadge">VN-INDEX —</span>
+      <span class="badge" id="dateBadge">—</span>
+      <span class="badge" id="statusBadge">Đang tải…</span>
+    </div>
+  </header>
+
+  <div class="note err" id="errNote" hidden></div>
+  <div class="note warn" id="qualityNote" hidden></div>
+
+  <!-- ===================== THE ANSWER ===================== -->
+  <section class="verdict tone-neutral" id="verdict">
+    <div class="vtop">
+      <div class="vkicker">Kết luận hôm nay — nhà đầu tư nên làm gì</div>
+      <div class="vtitle" id="vTitle">Đang tính toán…</div>
+      <div class="vgist" id="vGist">Đang tải dữ liệu thị trường và tính lại toàn bộ chỉ số.</div>
+    </div>
+    <div class="vquick">
+      <div class="vq"><div class="t">Chỉ số F&amp;G</div><div class="v" id="qFG">—</div><div class="s" id="qFGs">—</div></div>
+      <div class="vq"><div class="t">Mức hoảng loạn</div><div class="v" id="qPanic">—</div><div class="s" id="qPanics">—</div></div>
+      <div class="vq"><div class="t">Tỷ trọng cổ phiếu đề xuất</div><div class="v" id="qWeight">—</div><div class="s" id="qWeights">hồ sơ Cân bằng</div></div>
+      <div class="vq"><div class="t">Chiết khấu từ đỉnh</div><div class="v" id="qDD">—</div><div class="s" id="qDDs">đỉnh 250 phiên</div></div>
+    </div>
+
+    <div class="confbox" id="confBox">
+      <div class="confhead">
+        <div>
+          <div class="vkicker">Độ tin cậy của kết luận này</div>
+          <div class="confnum"><span id="confVal">—</span><span class="confpct">%</span>
+            <span class="conflabel" id="confLabel">—</span></div>
+        </div>
+        <div class="confmeter"><b id="confFill"></b><i id="confCeil" title="Trần tin cậy từ kiểm định lịch sử"></i></div>
+      </div>
+      <div class="confadvice" id="confAdvice"></div>
+      <div class="confparts" id="confParts"></div>
+      <div class="confnote" id="confNote"></div>
+    </div>
+    <div class="vbody">
+      <div class="vcol">
+        <div class="vh">Vì sao — bằng chứng</div>
+        <ul class="whylist" id="vWhy"></ul>
+        <div class="levels" id="vLevels"></div>
+      </div>
+      <div class="vcol">
+        <div class="vh" id="vPlanTitle">Kế hoạch chia lô</div>
+        <div id="vTranches"></div>
+        <div class="vh" style="margin-top:18px">Điều kiện huỷ kế hoạch</div>
+        <ul class="stoplist" id="vStops"></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== GAUGE + HISTORY ===================== -->
+  <div class="grid" style="border-top:1px solid var(--line);margin-top:26px">
+    <div class="panel gaugebox">
+      <svg class="gauge-svg" id="gauge" viewBox="0 0 400 240" role="img" aria-label="Đồng hồ chỉ số sợ hãi và tham lam"></svg>
+      <div class="score-big mono" id="scoreBig">—</div>
+      <div class="score-label" id="scoreLabel">—</div>
+      <div class="prevrow">
+        <div class="prev"><div class="t">Phiên trước</div><div class="v mono" id="pClose">—</div></div>
+        <div class="prev"><div class="t">Tuần trước</div><div class="v mono" id="pWeek">—</div></div>
+        <div class="prev"><div class="t">Tháng trước</div><div class="v mono" id="pMonth">—</div></div>
+        <div class="prev"><div class="t">Năm trước</div><div class="v mono" id="pYear">—</div></div>
+      </div>
+
+      <div class="panicwrap">
+        <div class="charttitle" style="margin-bottom:7px">Mức hoảng loạn <span class="thin" id="panicVal"></span></div>
+        <div class="panicbar"><b id="panicFill"></b></div>
+        <div class="panicticks"><span>0 Bình thường</span><span>45 Hoảng loạn</span><span>100 Bán tháo</span></div>
+        <div class="panicparts" id="panicParts"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="charttitle">Lịch sử chỉ số vs VN-Index</div>
+      <canvas id="histChart" height="210"></canvas>
+      <div class="charttitle" style="margin-top:18px">Mức hoảng loạn theo thời gian</div>
+      <canvas id="panicChart" height="90"></canvas>
+    </div>
+  </div>
+
+  <!-- ===================== BASE RATES ===================== -->
+  <section class="panel sect">
+    <h2>Lịch sử đã trả lời câu hỏi này chưa?</h2>
+    <p class="lede" id="brLede">Bảng dưới đây trả lời trực tiếp câu hỏi “bắt đáy bây giờ thì sao”: mỗi lần trong quá khứ chỉ số rơi vào một vùng, VN-Index sau đó 1 / 3 / 6 tháng diễn biến thế nào.</p>
+    <div class="note" id="brHighlight" style="margin-top:0;margin-bottom:14px"></div>
+    <div class="chips" id="brChips" style="margin-bottom:12px">
+      <button class="chip" data-h="21">1 tháng</button>
+      <button class="chip on" data-h="63">3 tháng</button>
+      <button class="chip" data-h="126">6 tháng</button>
+    </div>
+    <div class="tablewrap">
+      <table id="brTable">
+        <thead><tr>
+          <th>Vùng F&amp;G</th><th>Số phiên</th><th>Trung vị</th><th>Trung bình</th>
+          <th>Tỷ lệ dương</th><th>Phân vị 25</th><th>Xấu nhất</th><th>Tốt nhất</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="lede" style="margin-top:12px;font-size:12px" id="brFoot"></p>
+  </section>
+
+  <!-- ===================== ALLOCATION + BACKTEST ===================== -->
+  <section class="panel sect">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+      <h2 style="margin:0">Tỷ trọng đề xuất &amp; kiểm định lịch sử</h2>
+      <div class="chips" id="profChips">
+        <button class="chip" data-p="conservative">Thận trọng</button>
+        <button class="chip on" data-p="balanced">Cân bằng</button>
+        <button class="chip" data-p="aggressive">Mạo hiểm</button>
+      </div>
+    </div>
+    <p class="lede" style="margin-top:10px">Quy tắc contrarian: càng sợ hãi càng nâng tỷ trọng cổ phiếu, càng tham lam càng hạ. Tỷ trọng thô từ vùng F&amp;G được điều chỉnh thêm theo xu hướng MA200 và mức độ hoảng loạn.</p>
+
+    <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;margin-top:6px">
+      <span id="eqPct" style="color:var(--cyan)">— % cổ phiếu</span>
+      <span id="cashPct" style="color:var(--muted)">— % tiền mặt</span>
+    </div>
+    <div id="splitBar" style="height:20px;display:flex;margin-top:7px;border:1px solid var(--line);overflow:hidden">
+      <div id="eqBar" style="background:var(--cyan);width:0"></div>
+      <div id="cashBar" style="background:var(--line2);flex:1"></div>
+    </div>
+    <ul class="whylist" id="wNotes" style="margin-top:11px;font-size:12.5px"></ul>
+
+    <div class="charttitle" style="margin-top:22px">Kiểm định trung thực: quy tắc này có thật sự hiệu quả không?</div>
+    <div class="note warn" id="btVerdict" hidden style="margin-top:0;margin-bottom:12px"></div>
+    <canvas id="btChart" height="150"></canvas>
+    <div class="kv" id="btStats"></div>
+    <div class="charttitle" style="margin-top:18px">Chia đôi mẫu — kiểm tra tính ổn định</div>
+    <div class="kv" id="btSplit"></div>
+    <p class="lede" style="margin-top:12px;font-size:12px" id="btFoot"></p>
+  </section>
+
+  <!-- ===================== COMPONENTS ===================== -->
+  <h2 style="margin-top:26px;margin-bottom:8px">7 thành phần cấu thành chỉ số</h2>
+  <p class="lede">Mỗi thành phần được chuẩn hoá về thang 0–100 bằng cùng một công thức: một nửa là vị trí phân vị trong lịch sử <b>chỉ tính dữ liệu quá khứ</b>, một nửa là khoảng cách tới mức trung tính đo bằng độ biến động quá khứ.</p>
+  <div class="comps" id="comps" style="border-top:1px solid var(--line)"></div>
+
+  <!-- ===================== METHOD / FAQ ===================== -->
+  <section class="panel sect-first sect" style="border-top:1px solid var(--line)">
+    <h2>Câu hỏi thường gặp</h2>
+
+    <details open><summary>Chỉ số này khác gì một con số 0–100 thông thường?</summary>
+      <p>Con số chỉ mô tả tâm lý. Trang này đi thêm ba bước: (1) tách riêng <b>mức hoảng loạn</b> để phân biệt “giảm có trật tự” với “bán tháo mất kiểm soát” — hai tình huống cần hai cách hành xử khác nhau; (2) quy đổi thành <b>một hành động cụ thể</b> kèm tỷ trọng đề xuất và kế hoạch chia lô có điều kiện kích hoạt bằng số; (3) đưa ra <b>tỷ lệ cơ sở lịch sử</b> để bạn biết xác suất thắng thua thay vì tin vào cảm giác.</p></details>
+
+    <details><summary>Chỉ số được tính từ những gì?</summary>
+      <p>7 thành phần trọng số bằng nhau, mô phỏng CNN Fear &amp; Greed Index và bản địa hoá cho TTCK Việt Nam:</p>
+      <ul>
+        <li><b>Đà thị trường</b> — VN-Index so với MA125.</li>
+        <li><b>Sức mạnh giá</b> — số mã VN30 sát đỉnh 52 tuần trừ số mã sát đáy 52 tuần.</li>
+        <li><b>Độ lan toả</b> — giá trị khớp lệnh của mã tăng so với mã giảm, làm mượt EMA 4 tuần.</li>
+        <li><b>Tâm lý phái sinh</b> — basis VN30F1M so với VN30 (thay cho Put/Call ratio của Mỹ).</li>
+        <li><b>Biến động</b> — biến động thực 20 phiên so với nền 50 phiên (thay cho VIX).</li>
+        <li><b>Nhu cầu trú ẩn</b> — lợi suất cổ phiếu 20 phiên so với lãi suất phi rủi ro 4,8%/năm.</li>
+        <li><b>Khẩu vị rủi ro</b> — thanh khoản 20 phiên so với nền 100 phiên (thay cho Junk Bond Demand).</li>
+      </ul></details>
+
+    <details><summary>“Mức hoảng loạn” tính thế nào và khác gì F&amp;G?</summary>
+      <p>F&amp;G trả lời “thị trường đang cảm thấy thế nào”. Mức hoảng loạn trả lời “đợt giảm này có mất kiểm soát không”. Nó tổng hợp 6 yếu tố: độ sâu chiết khấu từ đỉnh 250 phiên, khoảng cách dưới MA200, hiện tượng vỡ khối lượng khi giá giảm, mật độ phiên giảm trong 10 phiên gần nhất, tốc độ giảm 10 phiên, và vị trí của biến động thực trong lịch sử 2 năm.</p>
+      <p>Rẻ + bình tĩnh thì gom từ từ. Rẻ + bán tháo là vùng vào lệnh có tỷ lệ lời/lỗ tốt nhất trong lịch sử, nhưng cũng là vùng dễ sai nhất nếu dùng đòn bẩy.</p></details>
+
+    <details><summary>Backtest này có đáng tin không?</summary>
+      <p>Đáng tin hơn phần lớn backtest bạn thấy, nhưng vẫn phải đọc kỹ. Những gì đã được xử lý đúng: mọi phép chuẩn hoá <b>chỉ dùng dữ liệu quá khứ</b> (điểm hiện tại không nằm trong phân phối dùng để chấm điểm chính nó); tỷ trọng áp cho phiên t là tỷ trọng suy ra từ tín hiệu đóng cửa phiên t−1; phí giao dịch 15 điểm cơ bản tính trên phần tỷ trọng thay đổi; phần tiền mặt hưởng lãi suất phi rủi ro.</p>
+      <p>Những gì vẫn là hạn chế: bộ quy tắc được thiết kế sau khi đã nhìn thấy lịch sử, nên kết quả toàn kỳ mang tính in-sample. Vì vậy trang này hiển thị thêm kết quả <b>chia đôi mẫu</b> — nếu nửa sau tệ hơn hẳn nửa đầu, quy tắc có mùi tối ưu quá đà. Ngoài ra dữ liệu chỉ có từ khoảng 2020, chưa bao gồm chu kỳ 2018 hay 2008.</p></details>
+
+    <details><summary>Vì sao “tỷ lệ dương lịch sử” lại có số phiên rất lớn?</summary>
+      <p>Vì các cửa sổ chồng lấn nhau: mỗi phiên trong cùng một vùng đều được tính một lần, mà các phiên liền kề thì gần như trùng nhau. 200 phiên quan sát <b>không</b> tương đương 200 lần thử độc lập — có thể chỉ là 5–10 đợt thị trường thật sự. Hãy đọc cột “số phiên” như một chỉ báo về độ dày dữ liệu, không phải cỡ mẫu thống kê.</p></details>
+
+    <details><summary>Cập nhật bao lâu một lần? Nếu mất kết nối thì sao?</summary>
+      <p>Mỗi lần mở trang, toàn bộ chỉ số được tính lại từ dữ liệu mới nhất của API công khai (DNSE/Entrade) — badge <b>LIVE</b> nghĩa là bạn đang xem số realtime của phiên gần nhất. Nếu không kết nối được, trang hiển thị bản snapshot đã nhúng kèm cảnh báo rõ ràng, và nếu dữ liệu quá 5 ngày sẽ có badge <b>DỮ LIỆU CŨ</b>. Nếu một số cổ phiếu VN30 tải lỗi, trang sẽ báo còn bao nhiêu thành phần hợp lệ thay vì âm thầm tính tiếp.</p></details>
+
+    <details><summary>Tôi nên dùng chỉ số này như thế nào?</summary>
+      <p>Như một cái phanh cảm xúc, không phải một cái máy in tiền. Giá trị lớn nhất của nó là ép bạn mua khi bản năng bảo bán, và ngừng mua khi bản năng bảo mua thêm. Kế hoạch chia lô tồn tại để bạn không dồn toàn bộ tiền vào một phiên và không bỏ lỡ hoàn toàn nếu đáy đã qua.</p>
+      <p>Ba nguyên tắc kèm theo: không dùng đòn bẩy ở vùng hoảng loạn; không có lô thứ tư nếu đã đi hết ba lô; và nếu điều kiện huỷ kế hoạch bị kích hoạt thì dừng, đừng thương lượng lại với chính mình.</p></details>
+  </section>
+
+  <div class="disclaimer">
+    <b>Miễn trừ trách nhiệm.</b> Đây là công cụ phân tích định lượng phục vụ mục đích tham khảo và giáo dục.
+    Nội dung trên trang <b>không phải khuyến nghị đầu tư cá nhân</b> và không tính đến tình hình tài chính, mục tiêu
+    hay khả năng chịu rủi ro của riêng bạn. Hiệu suất trong quá khứ không đảm bảo cho kết quả tương lai; mọi backtest
+    đều được xây dựng sau khi lịch sử đã xảy ra. Dữ liệu lấy từ API công khai và có thể sai sót hoặc gián đoạn.
+    Bạn hoàn toàn chịu trách nhiệm cho các quyết định giao dịch của mình.
+  </div>
+
+  <footer>
+    <span id="footLeft">VN Fear &amp; Greed Index</span>
+    <span id="footRight">Nguồn dữ liệu: DNSE / Entrade</span>
+  </footer>
+</div>
+
+<script>window.FG_OFFLINE = true; window.FGData = null;</script>
+<script>/* ---- engine.js ---- */
+/* =============================================================================
+   VN Fear & Greed Index — ENGINE
+   Pure computation. No DOM. No globals besides the exported namespace.
+   Runs in the browser and under Node (for tests) via the UMD shim at the bottom.
+
+   Design rules enforced here (differences vs. the v1 implementation):
+   1.  Every rolling normalisation uses a STRICTLY PAST window. The current
+       observation is never part of the distribution it is scored against.
+   2.  All 7 components share one normalisation family, so their 0-100 values
+       are actually comparable before averaging.
+   3.  Missing components re-weight the composite, but the re-weighting is
+       reported (`coverage`, `missing`) instead of happening silently.
+   4.  Nothing is coerced to 0 when it is missing. Missing is `null`.
+   ========================================================================== */
+'use strict';
+
+(function (root, factory) {
+  const api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.FGEngine = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+
+/* ---------------------------------------------------------------- constants */
+
+const EPS = 1e-12;
+const TRADING_DAYS = 252;
+
+/** Risk-free proxy: 12M VND deposit / short government bond, annualised. */
+const RF_ANNUAL = 0.048;
+
+/** Round-trip transaction cost assumption for the backtest (15 bps). */
+const COST_PER_TURN = 0.0015;
+
+const VN30 = ['ACB','BCM','BID','CTG','DGC','FPT','GAS','GVR','HDB','HPG',
+              'LPB','MBB','MSN','MWG','PLX','SAB','SHB','SSB','SSI','STB',
+              'TCB','TPB','VCB','VHM','VIB','VIC','VJC','VNM','VPB','VRE'];
+
+const COMPONENT_IDS = ['momentum','strength','breadth','putcall',
+                       'volatility','safehaven','junkdemand'];
+
+/** Equal weights. Kept explicit so they can be changed without touching logic. */
+const COMPONENT_WEIGHTS = {
+  momentum: 1, strength: 1, breadth: 1, putcall: 1,
+  volatility: 1, safehaven: 1, junkdemand: 1,
+};
+
+/** Minimum share of total weight that must be present for a valid composite. */
+const MIN_COVERAGE = 5 / 7;
+
+const META = {
+  momentum:   ['Đà thị trường',        'VN-Index so với trung bình 125 phiên'],
+  strength:   ['Sức mạnh giá cổ phiếu','Số mã VN30 sát đỉnh vs sát đáy 52 tuần'],
+  breadth:    ['Độ lan toả dòng tiền', 'Giá trị khớp lệnh mã tăng vs mã giảm'],
+  putcall:    ['Tâm lý phái sinh',     'Basis VN30F1M so với chỉ số cơ sở VN30'],
+  volatility: ['Biến động thị trường', 'Biến động thực 20 phiên so với nền 50 phiên'],
+  safehaven:  ['Nhu cầu trú ẩn',       'Lợi suất cổ phiếu 20 phiên so với lãi suất phi rủi ro'],
+  junkdemand: ['Khẩu vị rủi ro',       'Thanh khoản 20 phiên so với nền 100 phiên'],
+};
+
+const ZONES = [
+  { max: 25,       key: 'extreme-fear',  label: 'Sợ hãi cực độ' },
+  { max: 45,       key: 'fear',          label: 'Sợ hãi' },
+  { max: 55.00001, key: 'neutral',       label: 'Trung tính' },
+  { max: 75,       key: 'greed',         label: 'Tham lam' },
+  { max: Infinity, key: 'extreme-greed', label: 'Tham lam cực độ' },
+];
+
+/* ------------------------------------------------------------- tiny helpers */
+
+const isNum = x => typeof x === 'number' && Number.isFinite(x);
+const NaNs  = n => new Array(n).fill(NaN);
+const clip  = (x, a, b) => Math.min(b, Math.max(a, x));
+const sum   = a => a.reduce((p, c) => p + c, 0);
+const mean  = a => sum(a) / a.length;
+
+/** Round for display; returns null (never 0) when the input is not a number. */
+const r1 = x => (isNum(x) ? +x.toFixed(1) : null);
+const r2 = x => (isNum(x) ? +x.toFixed(2) : null);
+
+/** Last finite value of a series, or null. */
+function lastFinite(a) {
+  for (let i = a.length - 1; i >= 0; i--) if (isNum(a[i])) return a[i];
+  return null;
+}
+
+/**
+ * Entrade timestamps are exchange-local sessions published between 00:00 and
+ * 12:00 UTC. Shifting by +7h (ICT) lands every observed bar on the correct
+ * Vietnamese calendar date without pulling in a timezone library.
+ */
+const dstr = t => new Date((t + 7 * 3600) * 1000).toISOString().slice(0, 10);
+
+/* ------------------------------------------------- rolling window primitives */
+
+function rollApply(a, w, minp, fn) {
+  const out = NaNs(a.length);
+  for (let i = 0; i < a.length; i++) {
+    const s = Math.max(0, i - w + 1);
+    const win = [];
+    for (let j = s; j <= i; j++) if (isNum(a[j])) win.push(a[j]);
+    if (win.length >= minp) out[i] = fn(win, a[i]);
+  }
+  return out;
+}
+
+const rollMean = (a, w, minp = w) => rollApply(a, w, minp, mean);
+const rollMax  = (a, w, minp = w) => rollApply(a, w, minp, x => Math.max(...x));
+const rollMin  = (a, w, minp = w) => rollApply(a, w, minp, x => Math.min(...x));
+
+const rollStd = (a, w, minp = w) => rollApply(a, w, minp, x => {
+  if (x.length < 2) return NaN;
+  const m = mean(x);
+  return Math.sqrt(sum(x.map(v => (v - m) * (v - m))) / (x.length - 1));
+});
+
+/**
+ * Percentile rank of a[i] inside the `w` observations that came BEFORE it.
+ * The current point is excluded from its own reference distribution, which is
+ * what makes the resulting score usable in a backtest without leakage.
+ * Returns a value in [0, 100).
+ */
+function rollPctPast(a, w, minp) {
+  const out = NaNs(a.length);
+  for (let i = 0; i < a.length; i++) {
+    if (!isNum(a[i])) continue;
+    const s = Math.max(0, i - w);
+    let n = 0, lt = 0;
+    for (let j = s; j < i; j++) {
+      if (!isNum(a[j])) continue;
+      n++;
+      if (a[j] < a[i]) lt++;
+    }
+    if (n >= minp) out[i] = (100 * lt) / n;
+  }
+  return out;
+}
+
+/** Standard deviation of the `w` observations strictly before index i. */
+function rollStdPast(a, w, minp) {
+  const out = NaNs(a.length);
+  for (let i = 0; i < a.length; i++) {
+    const s = Math.max(0, i - w);
+    const win = [];
+    for (let j = s; j < i; j++) if (isNum(a[j])) win.push(a[j]);
+    if (win.length >= minp && win.length >= 2) {
+      const m = mean(win);
+      out[i] = Math.sqrt(sum(win.map(v => (v - m) * (v - m))) / (win.length - 1));
+    }
+  }
+  return out;
+}
+
+/**
+ * pandas-equivalent ewm(span, adjust=True, ignore_na=True).
+ * v1 decayed the accumulator on NaN inputs, which quietly biased the breadth
+ * series toward 0 across holidays. Here NaN observations are truly skipped.
+ */
+function ewmAdjusted(a, span) {
+  const alpha = 2 / (span + 1);
+  let num = 0, den = 0;
+  const out = NaNs(a.length);
+  for (let i = 0; i < a.length; i++) {
+    if (isNum(a[i])) {
+      num = num * (1 - alpha) + a[i];
+      den = den * (1 - alpha) + 1;
+    }
+    out[i] = den > EPS ? num / den : NaN;
+  }
+  return out;
+}
+
+/* ------------------------------------------------------ scoring transformers */
+
+/**
+ * Score an unbounded, zero-anchored signal onto 0-100.
+ * Half of the score is where the signal sits in its own recent history
+ * (percentile, past-only); half is how far it is from its neutral point of 0
+ * in units of past volatility (tanh, saturating).
+ */
+function scoreDir(raw, opts = {}) {
+  const { w = TRADING_DAYS, minp = 60, invert = false, k = 0.7 } = opts;
+  const p  = rollPctPast(raw, w, minp);
+  const sd = rollStdPast(raw, w, minp);
+  return raw.map((v, i) => {
+    if (!isNum(v) || !isNum(p[i]) || !isNum(sd[i]) || sd[i] < EPS) return NaN;
+    const t = 50 * (1 + Math.tanh((k * v) / sd[i]));
+    const s = 0.5 * p[i] + 0.5 * t;
+    return invert ? 100 - s : s;
+  });
+}
+
+/**
+ * Score a signal that is already bounded on [-1, 1] and zero-anchored.
+ * Same 50/50 blend as scoreDir, but the tanh scale is a fixed constant because
+ * a rolling stdev of a bounded ratio is unstable on weekly data.
+ *
+ * v1 used a bare tanh here, which put `strength` and `breadth` on a completely
+ * different distribution from the other five components and then averaged them
+ * together anyway. During warm-up (before `minp` history exists) we still fall
+ * back to the bare tanh rather than dropping the component.
+ */
+function scoreBounded(raw, scale, opts = {}) {
+  const { w = 156, minp = 52, invert = false } = opts;
+  const p = rollPctPast(raw, w, minp);
+  return raw.map((v, i) => {
+    if (!isNum(v)) return NaN;
+    const t = 50 * (1 + Math.tanh(v / scale));
+    const s = isNum(p[i]) ? 0.5 * p[i] + 0.5 * t : t;
+    return invert ? 100 - s : s;
+  });
+}
+
+/** Linear interpolation across an ascending list of [input, output] knots. */
+function piecewise(x, knots) {
+  if (!isNum(x)) return NaN;
+  if (x <= knots[0][0]) return knots[0][1];
+  const last = knots[knots.length - 1];
+  if (x >= last[0]) return last[1];
+  for (let i = 1; i < knots.length; i++) {
+    const [x0, y0] = knots[i - 1], [x1, y1] = knots[i];
+    if (x <= x1) return y0 + ((x - x0) / (x1 - x0)) * (y1 - y0);
+  }
+  return last[1];
+}
+
+/* -------------------------------------------------------------- zone helpers */
+
+function zoneOf(score) {
+  if (!isNum(score)) return { key: 'unknown', label: 'Không xác định', max: 0 };
+  for (const z of ZONES) if (score < z.max) return z;
+  return ZONES[ZONES.length - 1];
+}
+const labelOf = score => zoneOf(score).label;
+
+/* =============================================================================
+   COMPOSITE INDEX
+   ========================================================================== */
+
+/**
+ * Weighted mean of whatever components exist at index i.
+ * Returns { score, coverage, missing } so callers can react to dropouts
+ * instead of receiving a silently re-weighted number.
+ */
+function combineAt(series, i, weights = COMPONENT_WEIGHTS) {
+  let wsum = 0, acc = 0, total = 0;
+  const missing = [];
+  for (const id of COMPONENT_IDS) {
+    const w = weights[id] ?? 0;
+    total += w;
+    const v = series[id] ? series[id][i] : NaN;
+    if (isNum(v)) { acc += w * v; wsum += w; }
+    else missing.push(id);
+  }
+  const coverage = total > 0 ? wsum / total : 0;
+  return {
+    score: coverage >= MIN_COVERAGE ? acc / wsum : NaN,
+    coverage,
+    missing,
+  };
+}
+
+/* =============================================================================
+   PANIC / CAPITULATION DETECTOR
+   A deliberately separate axis from Fear & Greed.
+   F&G answers "how does the market feel?".  Panic answers "is this an orderly
+   pullback or a disorderly washout?".  The two together decide position sizing:
+   cheap-and-calm is accumulated slowly, cheap-and-violent is where the
+   asymmetric entries historically live.
+   ========================================================================== */
+
+function computePanic(c, v) {
+  const n = c.length;
+
+  const hi250   = rollMax(c, 250, 60);
+  const ma200   = rollMean(c, 200, 120);
+  const ma20v   = rollMean(v, 20, 10);
+  const logret  = c.map((x, i) => (i > 0 && isNum(c[i - 1]) && c[i - 1] > 0 ? Math.log(x / c[i - 1]) : NaN));
+  const rv20    = rollStd(logret, 20, 15).map(x => (isNum(x) ? x * Math.sqrt(TRADING_DAYS) : NaN));
+  const rvPct   = rollPctPast(rv20, TRADING_DAYS * 2, 120);
+  const distMA  = c.map((x, i) => (isNum(ma200[i]) && ma200[i] > 0 ? x / ma200[i] - 1 : NaN));
+  const distSd  = rollStdPast(distMA, TRADING_DAYS * 3, 200);
+
+  const parts = {
+    drawdown: NaNs(n), belowTrend: NaNs(n), volumeClimax: NaNs(n),
+    downDays: NaNs(n), velocity: NaNs(n), volatility: NaNs(n),
+  };
+  const score = NaNs(n);
+  const drawdown = NaNs(n);
+  const ret10 = NaNs(n);
+  const volRatio = NaNs(n);
+
+  for (let i = 0; i < n; i++) {
+    // (a) depth: how far below the 250-session high we are
+    if (isNum(hi250[i]) && hi250[i] > 0) {
+      drawdown[i] = c[i] / hi250[i] - 1;
+      parts.drawdown[i] = piecewise(-drawdown[i] * 100,
+        [[0, 0], [5, 20], [10, 40], [15, 60], [20, 80], [30, 100]]);
+    }
+
+    // (b) structure: distance below the 200-session trend, in past-vol units
+    if (isNum(distMA[i]) && isNum(distSd[i]) && distSd[i] > EPS) {
+      parts.belowTrend[i] = clip(50 * (1 + Math.tanh(-distMA[i] / distSd[i])), 0, 100);
+    }
+
+    // (c) participation: volume spike, but only counted as panic on down moves
+    if (isNum(ma20v[i]) && ma20v[i] > 0) {
+      volRatio[i] = v[i] / ma20v[i];
+      const falling = i >= 5 && isNum(c[i - 5]) && c[i] < c[i - 5];
+      parts.volumeClimax[i] = falling
+        ? piecewise(volRatio[i], [[0.9, 0], [1.2, 35], [1.6, 70], [2.4, 100]])
+        : 0;
+    }
+
+    // (d) persistence: share of the last 10 sessions that closed down
+    if (i >= 10) {
+      let down = 0;
+      for (let j = i - 9; j <= i; j++) if (isNum(c[j]) && isNum(c[j - 1]) && c[j] < c[j - 1]) down++;
+      parts.downDays[i] = piecewise(down / 10,
+        [[0.3, 0], [0.5, 20], [0.7, 55], [0.9, 85], [1.0, 100]]);
+    }
+
+    // (e) speed: 10-session return
+    if (i >= 10 && isNum(c[i - 10]) && c[i - 10] > 0) {
+      ret10[i] = c[i] / c[i - 10] - 1;
+      parts.velocity[i] = piecewise(-ret10[i] * 100,
+        [[0, 0], [3, 25], [6, 55], [10, 80], [15, 100]]);
+    }
+
+    // (f) turbulence: where realised vol sits in its own 2-year history
+    if (isNum(rvPct[i])) parts.volatility[i] = clip((rvPct[i] - 50) * 2, 0, 100);
+
+    const W = { drawdown: 0.20, belowTrend: 0.15, volumeClimax: 0.15,
+                downDays: 0.15, velocity: 0.20, volatility: 0.15 };
+    let acc = 0, wsum = 0;
+    for (const k in W) if (isNum(parts[k][i])) { acc += W[k] * parts[k][i]; wsum += W[k]; }
+    if (wsum >= 0.7) score[i] = acc / wsum;
+  }
+
+  return { score, parts, drawdown, ret10, volRatio, ma200, rv20, hi250 };
+}
+
+function panicLabel(p) {
+  if (!isNum(p)) return 'Không xác định';
+  if (p < 25) return 'Bình thường';
+  if (p < 45) return 'Căng thẳng';
+  if (p < 65) return 'Hoảng loạn';
+  return 'Bán tháo / Capitulation';
+}
+
+/* =============================================================================
+   HISTORICAL BASE RATES
+   "When the index was this low before, what actually happened next?"
+   Overlapping windows are used, so the effective sample is far smaller than n.
+   That caveat is returned with the data rather than buried.
+   ========================================================================== */
+
+const BUCKETS = [
+  { lo: -Infinity, hi: 20, label: '< 20' },
+  { lo: 20, hi: 30, label: '20 – 30' },
+  { lo: 30, hi: 40, label: '30 – 40' },
+  { lo: 40, hi: 50, label: '40 – 50' },
+  { lo: 50, hi: 60, label: '50 – 60' },
+  { lo: 60, hi: 70, label: '60 – 70' },
+  { lo: 70, hi: Infinity, label: '> 70' },
+];
+
+const HORIZONS = [
+  { d: 21,  label: '1 tháng' },
+  { d: 63,  label: '3 tháng' },
+  { d: 126, label: '6 tháng' },
+];
+
+function quantile(sorted, q) {
+  if (!sorted.length) return NaN;
+  const pos = (sorted.length - 1) * q;
+  const lo = Math.floor(pos), hi = Math.ceil(pos);
+  return lo === hi ? sorted[lo] : sorted[lo] + (sorted[hi] - sorted[lo]) * (pos - lo);
+}
+
+function forwardStats(rets) {
+  if (!rets.length) return null;
+  const s = [...rets].sort((a, b) => a - b);
+  return {
+    n: rets.length,
+    median: r1(quantile(s, 0.5) * 100),
+    mean: r1(mean(rets) * 100),
+    hit: r1((rets.filter(x => x > 0).length / rets.length) * 100),
+    p25: r1(quantile(s, 0.25) * 100),
+    worst: r1(s[0] * 100),
+    best: r1(s[s.length - 1] * 100),
+  };
+}
+
+function baseRates(composite, c) {
+  const table = BUCKETS.map(b => ({ label: b.label, lo: b.lo, hi: b.hi, h: {} }));
+  for (const b of table) for (const h of HORIZONS) b.h[h.d] = [];
+
+  for (let i = 0; i < composite.length; i++) {
+    const s = composite[i];
+    if (!isNum(s)) continue;
+    const b = table.find(x => s >= x.lo && s < x.hi);
+    if (!b) continue;
+    for (const h of HORIZONS) {
+      const j = i + h.d;
+      if (j < c.length && isNum(c[j]) && isNum(c[i]) && c[i] > 0) b.h[h.d].push(c[j] / c[i] - 1);
+    }
+  }
+
+  return table.map(b => ({
+    label: b.label, lo: b.lo, hi: b.hi,
+    stats: Object.fromEntries(HORIZONS.map(h => [h.d, forwardStats(b.h[h.d])])),
+  }));
+}
+
+/**
+ * Base rates for a neighbourhood around the current reading rather than a
+ * fixed bucket — a score of 24.9 and 25.1 should not give different answers.
+ */
+function baseRatesAround(composite, c, current, halfWidth = 5) {
+  if (!isNum(current)) return null;
+  const lo = current - halfWidth, hi = current + halfWidth;
+  const out = { lo: r1(lo), hi: r1(hi), stats: {} };
+
+  /**
+   * Count contiguous runs, not days. 60 days inside the band sounds like a
+   * healthy sample until you notice they are three week-long episodes. This is
+   * the number that actually governs how much the base rates can be trusted.
+   */
+  const GAP_TOLERANCE = 21; // a re-entry within a month is the same episode
+  let episodes = 0, daysIn = 0, lastInside = -Infinity;
+  for (let i = 0; i < composite.length; i++) {
+    const s = composite[i];
+    if (!isNum(s) || s < lo || s > hi) continue;
+    daysIn++;
+    if (i - lastInside > GAP_TOLERANCE) episodes++;
+    lastInside = i;
+  }
+  out.episodes = episodes;
+  out.daysIn = daysIn;
+
+  for (const h of HORIZONS) {
+    const rets = [];
+    for (let i = 0; i < composite.length; i++) {
+      const s = composite[i];
+      if (!isNum(s) || s < lo || s > hi) continue;
+      const j = i + h.d;
+      if (j < c.length && isNum(c[j]) && isNum(c[i]) && c[i] > 0) rets.push(c[j] / c[i] - 1);
+    }
+    out.stats[h.d] = forwardStats(rets);
+  }
+  return out;
+}
+
+/* =============================================================================
+   CONFIDENCE
+   How much weight the verdict deserves, expressed as a number instead of a
+   shrug. Every input is something measured, not a hand-set constant:
+
+   1. coverage        — how many of the 7 components actually reported
+   2. agreement       — do the components tell the same story, or contradict?
+   3. evidence        — is the historical base rate for this reading consistent
+                        across horizons, and built on enough distinct episodes?
+   4. extremity       — readings near 50 carry less information than extremes
+   5. validation      — a hard ceiling derived from whether the rule beat a
+                        fixed-weight portfolio at the SAME average exposure.
+                        If the strategy cannot clear that bar, no amount of
+                        component agreement earns high confidence.
+   ========================================================================== */
+
+function computeConfidence(input) {
+  const { score, componentScores, coverage, around, backtest } = input;
+  const parts = {};
+
+  parts.coverage = isNum(coverage) ? clip(coverage * 100, 0, 100) : 0;
+
+  const vals = (componentScores || []).filter(isNum);
+  if (vals.length >= 3) {
+    const m = mean(vals);
+    const sd = Math.sqrt(sum(vals.map(v => (v - m) * (v - m))) / (vals.length - 1));
+    // sd of ~35 means components are pointing in opposite directions.
+    parts.agreement = clip(100 * (1 - sd / 35), 0, 100);
+  } else parts.agreement = 0;
+
+  if (around && around.stats) {
+    const meds = HORIZONS.map(h => around.stats[h.d]).filter(Boolean);
+    if (meds.length) {
+      const signs = meds.map(s => Math.sign(s.median || 0));
+      const dominant = Math.sign(sum(signs)) || 1;
+      const signAgree = signs.filter(x => x === dominant).length / signs.length;
+      const avgHit = mean(meds.map(s => (dominant > 0 ? s.hit : 100 - s.hit)));
+      const hitStrength = clip((avgHit - 50) / 25, 0, 1);
+      const episodeAdequacy = clip((around.episodes || 0) / 8, 0, 1);
+      parts.evidence = clip(100 * (0.30 * signAgree + 0.30 * hitStrength + 0.40 * episodeAdequacy), 0, 100);
+    } else parts.evidence = 0;
+  } else parts.evidence = 0;
+
+  parts.extremity = isNum(score) ? clip((Math.abs(score - 50) / 30) * 100, 0, 100) : 0;
+
+  let ceiling = 60, validationNote = 'Chưa kiểm định được hiệu quả lịch sử của quy tắc.';
+  if (backtest && backtest.strat && backtest.matched) {
+    const s = backtest.strat.total, b = backtest.matched.total;
+    if (isNum(s) && isNum(b)) {
+      const edge = s - b;
+      if (edge > 10)      { ceiling = 85; validationNote = `Quy tắc vượt danh mục cố định cùng tỷ trọng ${r1(edge)} điểm % trong mẫu.`; }
+      else if (edge > 0)  { ceiling = 70; validationNote = `Quy tắc nhỉnh hơn danh mục cố định cùng tỷ trọng ${r1(edge)} điểm % — chưa đủ thuyết phục.`; }
+      else if (edge > -15){ ceiling = 45; validationNote = `Quy tắc THUA danh mục cố định cùng tỷ trọng ${r1(-edge)} điểm % trong mẫu.`; }
+      else                { ceiling = 30; validationNote = `Quy tắc THUA danh mục cố định cùng tỷ trọng tới ${r1(-edge)} điểm % — tín hiệu chưa chứng minh được giá trị định thời điểm.`; }
+    }
+  }
+
+  const W = { coverage: 0.20, agreement: 0.25, evidence: 0.30, extremity: 0.25 };
+  let raw = 0;
+  for (const k in W) raw += W[k] * (parts[k] || 0);
+
+  const value = clip(Math.min(raw, ceiling), 0, 100);
+
+  const drags = [];
+  if (parts.coverage < 100) drags.push('thiếu thành phần dữ liệu');
+  if (parts.agreement < 45) drags.push('các thành phần mâu thuẫn nhau');
+  if (parts.evidence < 45) drags.push('bằng chứng lịch sử mỏng hoặc không nhất quán');
+  if (parts.extremity < 40) drags.push('chỉ số gần vùng trung tính nên ít thông tin');
+  if (raw > ceiling) drags.push('trần tin cậy do kiểm định lịch sử');
+
+  return {
+    value: r1(value),
+    label: value >= 70 ? 'Cao' : value >= 50 ? 'Khá' : value >= 30 ? 'Thấp' : 'Rất thấp',
+    parts: Object.fromEntries(Object.keys(parts).map(k => [k, r1(parts[k])])),
+    ceiling,
+    validationNote,
+    drags,
+  };
+}
+
+/* =============================================================================
+   ALLOCATION LADDER + BACKTEST
+   ========================================================================== */
+
+/** Contrarian target equity weight from the F&G score alone. */
+function zoneWeight(s) {
+  if (!isNum(s)) return NaN;
+  return piecewise(s, [[10, 95], [20, 90], [25, 85], [35, 75], [45, 65],
+                       [55, 55], [65, 45], [75, 35], [85, 25], [95, 15]]);
+}
+
+/**
+ * Regime-aware target: the pure contrarian ladder, nudged by the 200-session
+ * trend and by whether the selling is disorderly.
+ * Buying falling knives in a confirmed downtrend is sized down; buying a
+ * capitulation flush while already cheap is sized up.
+ */
+function targetWeight(score, panic, ctx) {
+  let t = zoneWeight(score);
+  if (!isNum(t)) return NaN;
+  const notes = [];
+
+  if (ctx && isNum(ctx.distMA200)) {
+    if (ctx.distMA200 < 0 && ctx.ma200Falling) { t -= 10; notes.push('Dưới MA200 và MA200 đang dốc xuống → giảm 10 điểm tỷ trọng'); }
+    else if (ctx.distMA200 < 0)                { t -= 5;  notes.push('Dưới MA200 → giảm 5 điểm tỷ trọng'); }
+    else if (ctx.ma200Rising)                  { t += 5;  notes.push('Trên MA200 và MA200 dốc lên → tăng 5 điểm tỷ trọng'); }
+  }
+  if (isNum(panic) && isNum(score) && score < 30 && panic >= 45) {
+    t += 8; notes.push('Bán tháo trong vùng định giá sợ hãi → tăng 8 điểm (vùng mua bất đối xứng)');
+  }
+  if (isNum(panic) && isNum(score) && score >= 55 && panic >= 55) {
+    t -= 8; notes.push('Biến động mạnh nhưng tâm lý chưa sợ → giảm 8 điểm (rủi ro chưa được chiết khấu)');
+  }
+  return { weight: clip(Math.round(t / 5) * 5, 0, 100), notes };
+}
+
+const PROFILES = {
+  conservative: { mult: 0.65, cap: 80,  label: 'Thận trọng' },
+  balanced:     { mult: 1.00, cap: 95,  label: 'Cân bằng' },
+  aggressive:   { mult: 1.30, cap: 100, label: 'Mạo hiểm' },
+};
+
+const profileWeight = (w, p) =>
+  isNum(w) ? clip(Math.round((w * PROFILES[p].mult) / 5) * 5, 0, PROFILES[p].cap) : NaN;
+
+function drawdownCurve(curve) {
+  let peak = -Infinity, worst = 0;
+  for (const x of curve) { peak = Math.max(peak, x); if (peak > 0) worst = Math.min(worst, x / peak - 1); }
+  return worst;
+}
+
+function annualise(curve, periods) {
+  if (curve.length < 2 || periods <= 0) return NaN;
+  return Math.pow(curve[curve.length - 1], TRADING_DAYS / periods) - 1;
+}
+
+function sharpe(rets, rfd) {
+  if (rets.length < 20) return NaN;
+  const ex = rets.map(x => x - rfd);
+  const m = mean(ex);
+  const sd = Math.sqrt(sum(ex.map(x => (x - m) * (x - m))) / (ex.length - 1));
+  return sd < EPS ? NaN : (m / sd) * Math.sqrt(TRADING_DAYS);
+}
+
+/**
+ * Walk-forward backtest.
+ *  - The weight applied to day k's return is the one implied by the signal
+ *    available at the CLOSE of day k-1.
+ *  - Transaction cost is charged on the day the weight actually changes.
+ *  - Because every component is normalised past-only, the equity curve does not
+ *    consume information that was unavailable at the time.
+ * Still in-sample in the sense that the rules themselves were chosen with
+ * hindsight; treat it as a sanity check on the rule set, not as a forecast.
+ */
+function backtest(c, weights, idx) {
+  const rfd = RF_ANNUAL / TRADING_DAYS;
+
+  // Pass 1: establish the strategy's average exposure so the fair benchmark —
+  // a fixed weight holding the SAME amount of equity on average — can be run
+  // alongside it. Comparing a 59%-invested rule to 100% buy-and-hold flatters
+  // or damns it for the wrong reason; this isolates the timing decision itself.
+  let expSum = 0, expN = 0;
+  for (let k = 1; k < idx.length; k++) {
+    const i = idx[k], iPrev = idx[k - 1];
+    if (!isNum(c[i]) || !isNum(c[iPrev]) || c[iPrev] <= 0) continue;
+    if (!isNum(weights[k - 1]) || !isNum(weights[k])) continue;
+    expSum += weights[k - 1] / 100; expN++;
+  }
+  const wMatched = expN ? expSum / expN : 0.6;
+
+  const strat = [], bench = [], matched = [], dates = [];
+  const sRets = [], bRets = [], mRets = [];
+  let es = 1, eb = 1, em = 1, turnover = 0;
+
+  for (let k = 1; k < idx.length; k++) {
+    const i = idx[k], iPrev = idx[k - 1];
+    if (!isNum(c[i]) || !isNum(c[iPrev]) || c[iPrev] <= 0) continue;
+    const wPrev = weights[k - 1];
+    const wNow  = weights[k];
+    if (!isNum(wPrev) || !isNum(wNow)) continue;
+
+    const r = c[i] / c[iPrev] - 1;
+    const w = wPrev / 100;
+    const cost = COST_PER_TURN * (Math.abs(wNow - wPrev) / 100);
+    const rs = w * r + (1 - w) * rfd - cost;
+    const rm = wMatched * r + (1 - wMatched) * rfd;
+
+    es *= 1 + rs;
+    eb *= 1 + r;
+    em *= 1 + rm;
+
+    turnover += Math.abs(wNow - wPrev) / 100;
+    strat.push(es); bench.push(eb); matched.push(em);
+    sRets.push(rs); bRets.push(r); mRets.push(rm);
+    dates.push(i);
+  }
+
+  const nP = strat.length;
+  const stat = (curve, rets) => {
+    if (!curve.length) return { total: null, cagr: null, maxdd: null, sharpe: null, calmar: null };
+    const dd = drawdownCurve(curve);
+    return {
+      total:  r1((curve[curve.length - 1] - 1) * 100),
+      cagr:   r1(annualise(curve, nP) * 100),
+      maxdd:  r1(dd * 100),
+      sharpe: r2(sharpe(rets, rfd)),
+      calmar: r2(dd < 0 ? annualise(curve, nP) / Math.abs(dd) : NaN),
+    };
+  };
+
+  return {
+    idx: dates,
+    strat, bench, matched,
+    stats: { strat: stat(strat, sRets), bench: stat(bench, bRets), matched: stat(matched, mRets) },
+    matchedWeight: r1(wMatched * 100),
+    turnoverPerYear: r1((turnover / nP) * TRADING_DAYS),
+    avgExposure: r1(wMatched * 100),
+    periods: nP,
+  };
+}
+
+/** Same engine over an arbitrary slice — used for the split-sample check. */
+function backtestSlice(c, weights, idx, from, to) {
+  return backtest(c, weights.slice(from, to), idx.slice(from, to));
+}
+
+/* =============================================================================
+   VERDICT ENGINE
+   Turns numbers into one unambiguous instruction, plus the conditions under
+   which that instruction stops being valid.
+   ========================================================================== */
+
+const ACTIONS = {
+  BUY_AGGRESSIVE: { key: 'buy-strong', tone: 'buy',
+    title: 'GIẢI NGÂN MẠNH — MUA CHỦ ĐỘNG',
+    gist: 'Thị trường đang bán tháo trong vùng định giá sợ hãi. Đây là vùng mua bất đối xứng.' },
+  BUY_PARTIAL: { key: 'buy-partial', tone: 'buy',
+    title: 'BẮT ĐÁY TỪNG PHẦN — CÓ',
+    gist: 'Có cơ sở để giải ngân một phần ngay, phần còn lại chia lô theo điều kiện bên dưới.' },
+  BUY_PROBE: { key: 'buy-probe', tone: 'lean-buy',
+    title: 'GIẢI NGÂN THĂM DÒ — LÔ NHỎ',
+    gist: 'Rẻ nhưng chưa có tín hiệu dừng rơi. Vào lô nhỏ, giữ phần lớn tiền mặt để mua thấp hơn.' },
+  ACCUMULATE: { key: 'accumulate', tone: 'lean-buy',
+    title: 'TÍCH LUỸ DẦN',
+    gist: 'Tâm lý còn thận trọng nhưng cấu trúc chưa gãy. Mua đều tay, không cần vội.' },
+  HOLD: { key: 'hold', tone: 'neutral',
+    title: 'GIỮ NGUYÊN — CHƯA LÀM GÌ',
+    gist: 'Không có lợi thế rõ ràng ở cả hai chiều. Đứng yên là quyết định đúng.' },
+  NO_CHASE: { key: 'no-chase', tone: 'lean-sell',
+    title: 'KHÔNG MUA ĐUỔI',
+    gist: 'Tâm lý đã nghiêng về tham lam. Giữ danh mục hiện có, ngừng mua mới ở vùng giá này.' },
+  TRIM: { key: 'trim', tone: 'sell',
+    title: 'GIẢM TỶ TRỌNG — CHỐT LỜI TỪNG PHẦN',
+    gist: 'Thị trường hưng phấn. Hạ tỷ trọng dần để có tiền mặt cho đợt chiết khấu sau.' },
+  WAIT_DATA: { key: 'wait', tone: 'neutral',
+    title: 'CHƯA ĐỦ DỮ LIỆU',
+    gist: 'Không đủ thành phần hợp lệ để đưa ra kết luận. Không hành động theo chỉ số lúc này.' },
+};
+
+function pickAction(score, panic, ctx) {
+  if (!isNum(score)) return ACTIONS.WAIT_DATA;
+  const falling = ctx.distMA200 < 0 && ctx.ma200Falling;
+  const stabilising = ctx.aboveMA20 || (isNum(ctx.fgDelta5) && ctx.fgDelta5 > 4);
+
+  if (score < 25) {
+    if (isNum(panic) && panic >= 60) return ACTIONS.BUY_AGGRESSIVE;
+    if (isNum(panic) && panic >= 40) return stabilising ? ACTIONS.BUY_PARTIAL : ACTIONS.BUY_PROBE;
+    return ACTIONS.BUY_PARTIAL;
+  }
+  if (score < 45) {
+    if (falling && !stabilising) return ACTIONS.BUY_PROBE;
+    return ACTIONS.ACCUMULATE;
+  }
+  if (score <= 55) return ACTIONS.HOLD;
+  if (score <= 75) return ACTIONS.NO_CHASE;
+  return ACTIONS.TRIM;
+}
+
+/**
+ * The tranche ladder. Expressed as a share of the gap between the investor's
+ * current equity weight and the target, so it works regardless of how much
+ * they already hold. Trigger levels are concrete index numbers, not vibes.
+ */
+function buildTranches(action, ctx) {
+  const px = ctx.last;
+  const lvl = x => (isNum(x) ? Math.round(x) : null);
+
+  if (action.tone === 'sell' || action.tone === 'lean-sell') {
+    return [
+      { pct: 50, when: 'Ngay phiên gần nhất',
+        detail: 'Hạ trước ở nhóm đã tăng nóng và nhóm thanh khoản thấp.' },
+      { pct: 30, when: `Nếu VN-Index vượt ${lvl(px * 1.03)} (+3%)`,
+        detail: 'Bán vào sức mạnh, không bán đuổi khi giảm.' },
+      { pct: 20, when: 'Nếu chỉ số F&G vượt 85',
+        detail: 'Vùng hưng phấn cực độ — giữ tiền mặt chờ chiết khấu.' },
+    ];
+  }
+  if (action === ACTIONS.HOLD) return [];
+
+  const first = action === ACTIONS.BUY_AGGRESSIVE ? 50
+              : action === ACTIONS.BUY_PARTIAL    ? 40
+              : action === ACTIONS.ACCUMULATE     ? 35 : 25;
+  const second = action === ACTIONS.BUY_AGGRESSIVE ? 30 : 35;
+  const third = 100 - first - second;
+
+  return [
+    { pct: first, when: 'Ngay — phiên kế tiếp',
+      detail: 'Mua ở nhóm vốn hoá lớn, thanh khoản cao, nợ vay thấp. Không dùng margin.' },
+    { pct: second, when: `Nếu VN-Index về ${lvl(px * 0.97)} (−3%) hoặc F&G xuống dưới ${Math.max(5, Math.round(ctx.score - 6))}`,
+      detail: 'Lô này chỉ kích hoạt khi thị trường giảm thêm — đây là phần thưởng cho việc chờ.' },
+    { pct: third, when: `Nếu VN-Index đóng cửa trên MA20 (${lvl(ctx.ma20)}) hoặc F&G bật lên trên ${Math.round(Math.min(60, ctx.score + 12))}`,
+      detail: 'Lô xác nhận — mua khi đà giảm đã dừng, chấp nhận giá cao hơn để đổi lấy độ chắc chắn.' },
+  ];
+}
+
+function buildInvalidation(action, ctx) {
+  const lvl = x => (isNum(x) ? Math.round(x) : '—');
+  if (action.tone === 'sell' || action.tone === 'lean-sell') {
+    return [
+      `Ngừng bán nếu VN-Index bật lên trên ${lvl(ctx.hi250)} kèm thanh khoản tăng — xu hướng tăng có thể còn kéo dài.`,
+      'Không bán toàn bộ. Đây là hạ tỷ trọng, không phải thoát hàng.',
+    ];
+  }
+  if (action === ACTIONS.HOLD) {
+    return ['Kích hoạt lại kế hoạch khi F&G rơi xuống dưới 35 (mua) hoặc vượt 70 (bán).'];
+  }
+  return [
+    `Dừng giải ngân nếu VN-Index đóng cửa dưới ${lvl(ctx.swingLow)} — đáy gần nhất bị xuyên thủng nghĩa là kịch bản này sai.`,
+    'Dừng nếu chỉ số hoảng loạn trên 80 mà thanh khoản CẠN dần — bán tháo không có người mua thì đáy chưa hình thành.',
+    'Không dùng đòn bẩy cho bất kỳ lô nào. Kế hoạch này giả định tiền thật, không margin.',
+    'Nếu sau 3 lô mà vẫn còn tiền mặt, giữ nguyên — không có lô thứ tư.',
+  ];
+}
+
+function buildVerdict(input) {
+  const { score, panic, ctx, coverage, missing, base, confidence } = input;
+  const action = pickAction(score, panic, ctx);
+  const tw = targetWeight(score, panic, ctx);
+  const target = tw && isNum(tw.weight) ? tw.weight : NaN;
+
+  const why = [];
+  if (isNum(score)) why.push(`Chỉ số F&G ${r1(score)}/100 — ${labelOf(score)}.`);
+  if (isNum(panic)) why.push(`Mức hoảng loạn ${r1(panic)}/100 — ${panicLabel(panic)}.`);
+  if (isNum(ctx.distMA200)) {
+    why.push(ctx.distMA200 < 0
+      ? `VN-Index đang thấp hơn MA200 ${Math.abs(r1(ctx.distMA200 * 100))}% — xu hướng dài hạn đã bị bẻ gãy.`
+      : `VN-Index còn cao hơn MA200 ${r1(ctx.distMA200 * 100)}% — xu hướng dài hạn vẫn nguyên.`);
+  }
+  if (isNum(ctx.drawdown)) why.push(`Đã chiết khấu ${Math.abs(r1(ctx.drawdown * 100))}% so với đỉnh 250 phiên.`);
+  if (base && base.stats && base.stats[63] && base.stats[63].n >= 15) {
+    const s = base.stats[63];
+    why.push(`Trong quá khứ, khi F&G nằm quanh mức này (${base.lo}–${base.hi}, ${s.n} phiên chồng lấn), VN-Index sau 3 tháng có trung vị ${s.median > 0 ? '+' : ''}${s.median}%, tỷ lệ dương ${s.hit}%, xấu nhất ${s.worst}%.`);
+  }
+  if (coverage < 1) {
+    why.push(`Chỉ có ${Math.round(coverage * 7)}/7 thành phần hợp lệ (thiếu: ${missing.map(m => META[m][0]).join(', ')}) — trọng số đã được chia lại và độ tin cậy thấp hơn bình thường.`);
+  }
+
+  /**
+   * Confidence is not decoration: it scales how much of the plan should
+   * actually be executed. A 30%-confidence "buy" is a small probe, not a
+   * conviction trade, and the copy has to say so in the same breath as the
+   * headline rather than in a footnote nobody reads.
+   */
+  let confidenceAdvice = '';
+  if (confidence && isNum(confidence.value)) {
+    const v = confidence.value;
+    if (v >= 70) confidenceAdvice = 'Độ tin cậy cao: có thể thực hiện kế hoạch với quy mô đầy đủ như mô tả.';
+    else if (v >= 50) confidenceAdvice = 'Độ tin cậy khá: nên thực hiện với khoảng 2/3 quy mô, giữ thêm tiền mặt dự phòng.';
+    else if (v >= 30) confidenceAdvice = 'Độ tin cậy thấp: chỉ nên coi đây là lệnh thăm dò với khoảng 1/3 quy mô. Tín hiệu chưa đủ mạnh để hành động dứt khoát.';
+    else confidenceAdvice = 'Độ tin cậy rất thấp: nên coi kết luận này là tham khảo, không phải cơ sở để hành động. Ưu tiên giữ nguyên trạng thái hiện tại.';
+  }
+
+  return {
+    confidence: confidence || null,
+    confidenceAdvice,
+    action: action.key,
+    tone: action.tone,
+    title: action.title,
+    gist: action.gist,
+    targetEquity: isNum(target) ? target : null,
+    profiles: isNum(target) ? {
+      conservative: profileWeight(target, 'conservative'),
+      balanced: profileWeight(target, 'balanced'),
+      aggressive: profileWeight(target, 'aggressive'),
+    } : null,
+    weightNotes: tw ? tw.notes : [],
+    why,
+    tranches: buildTranches(action, ctx),
+    invalidation: buildInvalidation(action, ctx),
+    levels: {
+      last: r2(ctx.last), ma20: r2(ctx.ma20), ma50: r2(ctx.ma50),
+      ma125: r2(ctx.ma125), ma200: r2(ctx.ma200),
+      hi250: r2(ctx.hi250), lo250: r2(ctx.lo250), swingLow: r2(ctx.swingLow),
+    },
+  };
+}
+
+/* =============================================================================
+   MAIN PIPELINE
+   Consumes already-fetched OHLCV payloads so it stays testable offline.
+   ========================================================================== */
+
+/**
+ * @param {Object} data
+ *   data.vni  {t,o,h,l,c,v}  VN-Index daily
+ *   data.vn30 {t,c}          VN30 index daily (basis denominator)
+ *   data.fut  {t,c}          VN30F1M daily
+ *   data.stocks [[sym, {t,h,l,c,v}], ...]  VN30 constituents, WEEKLY
+ */
+function compute(data, opts = {}) {
+  const { vni, vn30, fut, stocks = [] } = data;
+  if (!vni || !Array.isArray(vni.t) || vni.t.length < 150) {
+    throw new Error('Dữ liệu VN-Index không đủ dài để tính chỉ số (cần ≥150 phiên).');
+  }
+
+  const dates = vni.t.map(dstr);
+  const c = vni.c.slice();
+  const v = vni.v.slice();
+  const n = c.length;
+
+  /* --- 1. momentum -------------------------------------------------------- */
+  const ma125 = rollMean(c, 125, 100);
+  const ma200 = rollMean(c, 200, 150);
+  const ma50  = rollMean(c, 50, 40);
+  const ma20  = rollMean(c, 20, 15);
+  const momentumRaw = c.map((x, i) => (isNum(ma125[i]) && ma125[i] > 0 ? x / ma125[i] - 1 : NaN));
+  const momentum = scoreDir(momentumRaw);
+
+  /* --- 5. volatility (inverted: high vol = fear) -------------------------- */
+  const logret = c.map((x, i) => (i > 0 && isNum(c[i - 1]) && c[i - 1] > 0 ? Math.log(x / c[i - 1]) : NaN));
+  const rv20 = rollStd(logret, 20, 18).map(x => (isNum(x) ? x * Math.sqrt(TRADING_DAYS) : NaN));
+  const rvBase = rollMean(rv20, 50, 40);
+  const volRaw = rv20.map((x, i) => (isNum(x) && isNum(rvBase[i]) && rvBase[i] > 0 ? x / rvBase[i] - 1 : NaN));
+  const volatility = scoreDir(volRaw, { invert: true });
+
+  /* --- 6. safe haven demand ---------------------------------------------- */
+  const shRaw = c.map((x, i) =>
+    (i >= 20 && isNum(c[i - 20]) && c[i - 20] > 0 ? x / c[i - 20] - 1 - (RF_ANNUAL * 20) / TRADING_DAYS : NaN));
+  const safehaven = scoreDir(shRaw);
+
+  /* --- 7. risk appetite via liquidity ------------------------------------ */
+  const v20 = rollMean(v, 20, 15), v100 = rollMean(v, 100, 80);
+  const liqRaw = v20.map((x, i) => (isNum(x) && isNum(v100[i]) && v100[i] > 0 ? x / v100[i] - 1 : NaN));
+  const junkdemand = scoreDir(liqRaw);
+
+  /* --- 4. derivatives basis ---------------------------------------------- */
+  let putcall = NaNs(n), basisPct = NaNs(n);
+  if (vn30 && fut && Array.isArray(vn30.t) && Array.isArray(fut.t)) {
+    const vn30Map = new Map();
+    vn30.t.forEach((t, i) => { if (isNum(vn30.c[i])) vn30Map.set(dstr(t), vn30.c[i]); });
+    const futDates = fut.t.map(dstr);
+    const basis = fut.c.map((x, i) => {
+      const base = vn30Map.get(futDates[i]);
+      return isNum(base) && base > 0 && isNum(x) ? x / base - 1 : NaN;
+    });
+    const basisScore = scoreDir(basis, { w: 250, minp: 60 });
+    const sMap = new Map(), bMap = new Map();
+    futDates.forEach((d, i) => { sMap.set(d, basisScore[i]); bMap.set(d, basis[i]); });
+    putcall = ffillOnDates(dates, sMap);
+    basisPct = ffillOnDates(dates, bMap);
+  }
+
+  /* --- 2 & 3. strength + breadth (weekly VN30 constituents) --------------- */
+  const wk = weeklyAggregates(stocks);
+  const strength = ffillOnDates(dates, wk.strengthMap);
+  const breadth  = ffillOnDates(dates, wk.breadthMap);
+
+  /* --- composite ---------------------------------------------------------- */
+  const series = { momentum, strength, breadth, putcall, volatility, safehaven, junkdemand };
+  const composite = NaNs(n);
+  const coverageArr = NaNs(n);
+  let lastMissing = [];
+  for (let i = 0; i < n; i++) {
+    const r = combineAt(series, i);
+    composite[i] = r.score;
+    coverageArr[i] = r.coverage;
+    if (isNum(r.score)) lastMissing = r.missing;
+  }
+
+  /* --- panic -------------------------------------------------------------- */
+  const panic = computePanic(c, v);
+
+  /* --- index of usable days ---------------------------------------------- */
+  const idx = [];
+  for (let i = 0; i < n; i++) if (isNum(composite[i])) idx.push(i);
+  if (!idx.length) throw new Error('Không tính được chỉ số tổng hợp — thiếu quá nhiều thành phần.');
+  const li = idx[idx.length - 1];
+
+  /* --- context for the verdict ------------------------------------------- */
+  const swingLow = (() => {
+    const from = Math.max(0, li - 40);
+    let m = Infinity;
+    for (let i = from; i <= li; i++) if (isNum(c[i])) m = Math.min(m, c[i]);
+    return Number.isFinite(m) ? m : NaN;
+  })();
+  const lo250 = rollMin(c, 250, 60)[li];
+  const ma200Slope = isNum(ma200[li]) && li >= 20 && isNum(ma200[li - 20])
+    ? ma200[li] / ma200[li - 20] - 1 : NaN;
+
+  const fgAt = k => {
+    const j = idx[idx.length - 1 - k];
+    return j === undefined ? NaN : composite[j];
+  };
+
+  const ctx = {
+    last: c[li],
+    ma20: ma20[li], ma50: ma50[li], ma125: ma125[li], ma200: ma200[li],
+    hi250: panic.hi250[li], lo250, swingLow,
+    distMA200: isNum(ma200[li]) && ma200[li] > 0 ? c[li] / ma200[li] - 1 : NaN,
+    ma200Falling: isNum(ma200Slope) && ma200Slope < -0.002,
+    ma200Rising:  isNum(ma200Slope) && ma200Slope > 0.002,
+    aboveMA20: isNum(ma20[li]) && c[li] > ma20[li],
+    drawdown: panic.drawdown[li],
+    ret10: panic.ret10[li],
+    volRatio: panic.volRatio[li],
+    score: composite[li],
+    fgDelta5: isNum(fgAt(0)) && isNum(fgAt(5)) ? fgAt(0) - fgAt(5) : NaN,
+  };
+
+  /* --- base rates --------------------------------------------------------- */
+  const rates = baseRates(composite, c);
+  const around = baseRatesAround(composite, c, composite[li], 5);
+
+  /* --- allocation + backtest --------------------------------------------- */
+  const targets = idx.map(i => {
+    const tw = targetWeight(composite[i], panic.score[i], {
+      distMA200: isNum(ma200[i]) && ma200[i] > 0 ? c[i] / ma200[i] - 1 : NaN,
+      ma200Falling: isNum(ma200[i]) && i >= 20 && isNum(ma200[i - 20]) ? ma200[i] / ma200[i - 20] - 1 < -0.002 : false,
+      ma200Rising:  isNum(ma200[i]) && i >= 20 && isNum(ma200[i - 20]) ? ma200[i] / ma200[i - 20] - 1 > 0.002 : false,
+    });
+    return tw ? tw.weight : NaN;
+  });
+
+  const bt = backtest(c, targets, idx);
+  const half = Math.floor(idx.length / 2);
+  const btFirst = backtestSlice(c, targets, idx, 0, half);
+  const btSecond = backtestSlice(c, targets, idx, half, idx.length);
+
+  /* --- confidence --------------------------------------------------------- */
+  const confidence = computeConfidence({
+    score: composite[li],
+    componentScores: COMPONENT_IDS.map(id => series[id][li]),
+    coverage: coverageArr[li],
+    around,
+    backtest: bt.stats,
+  });
+
+  /* --- verdict ------------------------------------------------------------ */
+  const verdict = buildVerdict({
+    score: composite[li],
+    panic: panic.score[li],
+    ctx,
+    coverage: coverageArr[li],
+    missing: lastMissing,
+    base: around,
+    confidence,
+  });
+
+  /* --- previous readings -------------------------------------------------- */
+  const prevAt = daysBack => {
+    const targetDate = new Date(dates[li]);
+    targetDate.setUTCDate(targetDate.getUTCDate() - daysBack);
+    const key = targetDate.toISOString().slice(0, 10);
+    let best = null;
+    for (const i of idx) if (dates[i] <= key) best = composite[i]; else break;
+    return best;
+  };
+
+  /* --- payload ------------------------------------------------------------ */
+  const histFrom = Math.max(0, idx.length - 500);
+  return {
+    updated: dates[li],
+    generatedAt: new Date().toISOString(),
+    dataQuality: {
+      coverage: r2(coverageArr[li]),
+      missing: lastMissing,
+      stocksUsed: wk.symbolsUsed,
+      stocksExpected: VN30.length,
+      weeklyBars: wk.weeks.length,
+      dailyBars: n,
+      firstDate: dates[0],
+    },
+    score: r1(composite[li]),
+    label: labelOf(composite[li]),
+    zone: zoneOf(composite[li]).key,
+    previous: {
+      close: r1(idx.length > 1 ? composite[idx[idx.length - 2]] : NaN),
+      week: r1(prevAt(7)),
+      month: r1(prevAt(30)),
+      year: r1(prevAt(365)),
+    },
+    vnindex: {
+      last: r2(c[li]),
+      chg_pct: r2(li > 0 && isNum(c[li - 1]) && c[li - 1] > 0 ? (c[li] / c[li - 1] - 1) * 100 : NaN),
+      ma20: r2(ma20[li]), ma50: r2(ma50[li]), ma125: r2(ma125[li]), ma200: r2(ma200[li]),
+      hi250: r2(panic.hi250[li]), lo250: r2(lo250),
+      drawdown_pct: r2(isNum(panic.drawdown[li]) ? panic.drawdown[li] * 100 : NaN),
+      ret10_pct: r2(isNum(panic.ret10[li]) ? panic.ret10[li] * 100 : NaN),
+      vol_ratio: r2(panic.volRatio[li]),
+      rv20_pct: r2(isNum(panic.rv20[li]) ? panic.rv20[li] * 100 : NaN),
+    },
+    panic: {
+      score: r1(panic.score[li]),
+      label: panicLabel(panic.score[li]),
+      parts: Object.fromEntries(Object.keys(panic.parts).map(k => [k, r1(panic.parts[k][li])])),
+      history: idx.slice(histFrom).map(i => ({ d: dates[i], s: r1(panic.score[i]) })),
+    },
+    components: COMPONENT_IDS.map(id => ({
+      id, name: META[id][0], desc: META[id][1],
+      score: r1(lastFinite(series[id])),
+      label: labelOf(lastFinite(series[id])),
+      available: isNum(series[id][li]),
+    })),
+    componentHistory: Object.fromEntries(COMPONENT_IDS.map(id =>
+      [id, idx.slice(histFrom).map(i => ({ d: dates[i], s: r1(series[id][i]) }))])),
+    history: idx.slice(histFrom).map(i => ({ d: dates[i], s: r1(composite[i]), v: r2(c[i]) })),
+    verdict,
+    baseRates: { buckets: rates, around, horizons: HORIZONS,
+                 sampleFrom: dates[idx[0]], sampleTo: dates[li], overlapping: true },
+    backtest: {
+      full: bt.stats, turnoverPerYear: bt.turnoverPerYear,
+      avgExposure: bt.avgExposure, periods: bt.periods,
+      firstHalf: btFirst.stats, secondHalf: btSecond.stats,
+      splitAt: dates[idx[half]] || null,
+      matchedWeight: bt.matchedWeight,
+      curve: bt.idx.map((i, k) => ({ d: dates[i], s: r2(bt.strat[k]), b: r2(bt.bench[k]), f: r2(bt.matched[k]) }))
+        .filter((_, k) => k % Math.max(1, Math.floor(bt.idx.length / 400)) === 0),
+    },
+    raw: {
+      momentum: momentumRaw, volatility: volRaw, safehaven: shRaw,
+      junkdemand: liqRaw, basis: basisPct,
+    },
+    // Full untruncated series, for research tooling only. `history` above is
+    // capped at 500 points for charting; anything that measures the strategy
+    // must use these instead or it will silently test a shorter window.
+    full: opts.full ? {
+      dates: idx.map(i => dates[i]),
+      close: idx.map(i => c[i]),
+      composite: idx.map(i => composite[i]),
+      panic: idx.map(i => panic.score[i]),
+      targets,
+      components: Object.fromEntries(COMPONENT_IDS.map(id => [id, idx.map(i => series[id][i])])),
+    } : undefined,
+    detailDates: idx.slice(histFrom).map(i => dates[i]),
+    detailSeries: {
+      momentum: idx.slice(histFrom).map(i => r2(isNum(momentumRaw[i]) ? momentumRaw[i] * 100 : NaN)),
+      volatility: idx.slice(histFrom).map(i => r2(isNum(rv20[i]) ? rv20[i] * 100 : NaN)),
+      basis: idx.slice(histFrom).map(i => r2(isNum(basisPct[i]) ? basisPct[i] * 100 : NaN)),
+      safehaven: idx.slice(histFrom).map(i => r2(isNum(shRaw[i]) ? shRaw[i] * 100 : NaN)),
+      junkdemand: idx.slice(histFrom).map(i => r2(isNum(liqRaw[i]) ? liqRaw[i] * 100 : NaN)),
+    },
+  };
+}
+
+/* -------------------------------------------------- weekly breadth/strength */
+
+function weeklyAggregates(stocks) {
+  const bySym = {};
+  const weekSet = new Set();
+  let symbolsUsed = 0;
+
+  for (const item of stocks) {
+    if (!item) continue;
+    const [sym, j] = item;
+    if (!j || !Array.isArray(j.t) || j.t.length < 30) continue;
+    bySym[sym] = j;
+    symbolsUsed++;
+    j.t.forEach(t => weekSet.add(dstr(t)));
+  }
+
+  const weeks = [...weekSet].sort();
+  const wi = new Map(weeks.map((d, i) => [d, i]));
+  const nHigh = new Array(weeks.length).fill(0);
+  const nLow  = new Array(weeks.length).fill(0);
+  const nVal  = new Array(weeks.length).fill(0);
+  const advV  = new Array(weeks.length).fill(0);
+  const decV  = new Array(weeks.length).fill(0);
+
+  for (const sym in bySym) {
+    const j = bySym[sym];
+    const d = j.t.map(dstr);
+    // 52-week extremes INCLUDING the current bar: both are known at the close
+    // of that bar, so this is a state descriptor, not look-ahead.
+    const h52 = rollMax(j.h, 52, 40);
+    const l52 = rollMin(j.l, 52, 40);
+    for (let i = 0; i < d.length; i++) {
+      const k = wi.get(d[i]);
+      if (k === undefined) continue;
+      if (isNum(h52[i]) && isNum(l52[i]) && isNum(j.c[i])) {
+        nVal[k]++;
+        if (j.c[i] >= 0.97 * h52[i]) nHigh[k]++;
+        if (j.c[i] <= 1.03 * l52[i]) nLow[k]++;
+      }
+      if (i > 0 && isNum(j.c[i]) && isNum(j.c[i - 1]) && isNum(j.v[i])) {
+        const value = j.c[i] * j.v[i];
+        if (j.c[i] > j.c[i - 1]) advV[k] += value;
+        else if (j.c[i] < j.c[i - 1]) decV[k] += value;
+      }
+    }
+  }
+
+  // A week covered by too few symbols is noise, not signal.
+  const minSymbols = Math.max(10, Math.floor(symbolsUsed * 0.6));
+  const strengthRaw = nHigh.map((x, i) => (nVal[i] >= minSymbols ? (x - nLow[i]) / nVal[i] : NaN));
+  const breadthBase = advV.map((x, i) => {
+    const tot = x + decV[i];
+    return nVal[i] >= minSymbols && tot > 0 ? (x - decV[i]) / tot : NaN;
+  });
+  const breadthRaw = ewmAdjusted(breadthBase, 4);
+
+  const strengthScore = scoreBounded(strengthRaw, 0.45, { w: 156, minp: 52 });
+  const breadthScore  = scoreBounded(breadthRaw, 0.35, { w: 156, minp: 52 });
+
+  const strengthMap = new Map(), breadthMap = new Map();
+  weeks.forEach((d, i) => { strengthMap.set(d, strengthScore[i]); breadthMap.set(d, breadthScore[i]); });
+
+  return { weeks, strengthMap, breadthMap, symbolsUsed, strengthRaw, breadthRaw };
+}
+
+/**
+ * Forward-fill a sparse date->value map onto a dense date axis.
+ * Values older than `maxStaleDays` are dropped rather than carried forever,
+ * so a stalled weekly feed shows up as a missing component (and therefore a
+ * coverage warning) instead of a frozen number pretending to be current.
+ */
+function ffillOnDates(dates, map, maxStaleDays = 21) {
+  const keys = [...map.keys()].sort();
+  const out = NaNs(dates.length);
+  let ki = 0, cur = NaN, curDate = null;
+  for (let i = 0; i < dates.length; i++) {
+    while (ki < keys.length && keys[ki] <= dates[i]) {
+      const val = map.get(keys[ki]);
+      if (isNum(val)) { cur = val; curDate = keys[ki]; }
+      ki++;
+    }
+    if (isNum(cur) && curDate) {
+      const age = (Date.parse(dates[i]) - Date.parse(curDate)) / 86400000;
+      out[i] = age <= maxStaleDays ? cur : NaN;
+    }
+  }
+  return out;
+}
+
+/* ------------------------------------------------------------------ exports */
+
+return {
+  // constants
+  VN30, COMPONENT_IDS, COMPONENT_WEIGHTS, META, ZONES, RF_ANNUAL,
+  HORIZONS, BUCKETS, PROFILES, ACTIONS, MIN_COVERAGE, COST_PER_TURN,
+  // primitives (exported for tests)
+  isNum, clip, mean, piecewise, dstr,
+  rollApply, rollMean, rollStd, rollMax, rollMin,
+  rollPctPast, rollStdPast, ewmAdjusted,
+  scoreDir, scoreBounded, zoneOf, labelOf,
+  quantile, forwardStats, combineAt,
+  // domain
+  computePanic, panicLabel, baseRates, baseRatesAround,
+  zoneWeight, targetWeight, profileWeight, backtest, backtestSlice,
+  pickAction, buildTranches, buildInvalidation, buildVerdict,
+  weeklyAggregates, ffillOnDates, compute,
+};
+
+});
+
+</script>
+<script>/* ---- snapshot.js ---- */
+window.SNAPSHOT = {"updated":"2026-07-24","generatedAt":"2026-07-27T04:50:45.731Z","dataQuality":{"coverage":1,"missing":[],"stocksUsed":30,"stocksExpected":30,"weeklyBars":238,"dailyBars":1300,"firstDate":"2021-05-04"},"score":25.4,"label":"Sợ hãi","zone":"fear","previous":{"close":18,"week":28,"month":40.6,"year":77.8},"vnindex":{"last":1686.11,"chg_pct":-0.78,"ma20":1801.71,"ma50":1829.61,"ma125":1804.81,"ma200":1772.79,"hi250":1927.94,"lo250":1493.41,"drawdown_pct":-12.54,"ret10_pct":-7.78,"vol_ratio":0.87,"rv20_pct":19.45},"panic":{"score":48,"label":"Hoảng loạn","parts":{"drawdown":50.2,"belowTrend":79,"volumeClimax":0,"downDays":55,"velocity":66.1,"volatility":31},"history":[{"d":"2025-11-03","s":26.2},{"d":"2025-11-04","s":26.6},{"d":"2025-11-05","s":24.3},{"d":"2025-11-06","s":29.5},{"d":"2025-11-07","s":36.7},{"d":"2025-11-10","s":36.5},{"d":"2025-11-11","s":37.4},{"d":"2025-11-12","s":31.8},{"d":"2025-11-13","s":30.2},{"d":"2025-11-14","s":23.9},{"d":"2025-11-17","s":17.2},{"d":"2025-11-18","s":16},{"d":"2025-11-19","s":18.3},{"d":"2025-11-20","s":15.8},{"d":"2025-11-21","s":15.9},{"d":"2025-11-24","s":12.5},{"d":"2025-11-25","s":13.7},{"d":"2025-11-26","s":13.3},{"d":"2025-11-27","s":11.2},{"d":"2025-11-28","s":10.3},{"d":"2025-12-01","s":9.6},{"d":"2025-12-02","s":8.7},{"d":"2025-12-03","s":8.1},{"d":"2025-12-04","s":7.3},{"d":"2025-12-05","s":1.4},{"d":"2025-12-08","s":0.8},{"d":"2025-12-09","s":1.1},{"d":"2025-12-10","s":2.6},{"d":"2025-12-11","s":3.6},{"d":"2025-12-12","s":25.1},{"d":"2025-12-15","s":21.3},{"d":"2025-12-16","s":22.4},{"d":"2025-12-17","s":23.2},{"d":"2025-12-18","s":23.2},{"d":"2025-12-19","s":19.5},{"d":"2025-12-22","s":14.9},{"d":"2025-12-23","s":11.2},{"d":"2025-12-24","s":9.5},{"d":"2025-12-25","s":14.1},{"d":"2025-12-26","s":15.1},{"d":"2025-12-29","s":12.7},{"d":"2025-12-30","s":12.1},{"d":"2025-12-31","s":11.3},{"d":"2026-01-05","s":11.2},{"d":"2026-01-06","s":11.6},{"d":"2026-01-07","s":12.3},{"d":"2026-01-08","s":12.4},{"d":"2026-01-09","s":11.4},{"d":"2026-01-12","s":10.8},{"d":"2026-01-13","s":6.2},{"d":"2026-01-14","s":6.7},{"d":"2026-01-15","s":8.2},{"d":"2026-01-16","s":7.3},{"d":"2026-01-19","s":6.5},{"d":"2026-01-20","s":11.2},{"d":"2026-01-21","s":14.8},{"d":"2026-01-22","s":9.4},{"d":"2026-01-23","s":12.7},{"d":"2026-01-26","s":21.2},{"d":"2026-01-27","s":25.3},{"d":"2026-01-28","s":29},{"d":"2026-01-29","s":21.9},{"d":"2026-01-30","s":21.2},{"d":"2026-02-02","s":28.9},{"d":"2026-02-03","s":25.1},{"d":"2026-02-04","s":25.9},{"d":"2026-02-05","s":26},{"d":"2026-02-06","s":31.4},{"d":"2026-02-09","s":26.6},{"d":"2026-02-10","s":23.9},{"d":"2026-02-11","s":16.1},{"d":"2026-02-12","s":14.5},{"d":"2026-02-13","s":13.8},{"d":"2026-02-23","s":10.3},{"d":"2026-02-24","s":10.1},{"d":"2026-02-25","s":10.3},{"d":"2026-02-26","s":8.4},{"d":"2026-02-27","s":6.8},{"d":"2026-03-02","s":19.8},{"d":"2026-03-03","s":19},{"d":"2026-03-04","s":21},{"d":"2026-03-05","s":18},{"d":"2026-03-06","s":24.6},{"d":"2026-03-09","s":60.8},{"d":"2026-03-10","s":58.3},{"d":"2026-03-11","s":40.3},{"d":"2026-03-12","s":46.2},{"d":"2026-03-13","s":51.3},{"d":"2026-03-16","s":49.2},{"d":"2026-03-17","s":41.7},{"d":"2026-03-18","s":41.4},{"d":"2026-03-19","s":43.3},{"d":"2026-03-20","s":49.3},{"d":"2026-03-23","s":51.1},{"d":"2026-03-24","s":47.6},{"d":"2026-03-25","s":44.1},{"d":"2026-03-26","s":45},{"d":"2026-03-27","s":35.4},{"d":"2026-03-30","s":37.2},{"d":"2026-03-31","s":36.5},{"d":"2026-04-01","s":31.6},{"d":"2026-04-02","s":31.8},{"d":"2026-04-03","s":32.2},{"d":"2026-04-06","s":30.9},{"d":"2026-04-07","s":30.7},{"d":"2026-04-08","s":24.5},{"d":"2026-04-09","s":26.3},{"d":"2026-04-10","s":25.1},{"d":"2026-04-13","s":22.9},{"d":"2026-04-14","s":21.6},{"d":"2026-04-15","s":20.1},{"d":"2026-04-16","s":17.3},{"d":"2026-04-17","s":16.1},{"d":"2026-04-20","s":11.8},{"d":"2026-04-21","s":12.1},{"d":"2026-04-22","s":8.6},{"d":"2026-04-23","s":7.1},{"d":"2026-04-24","s":8.5},{"d":"2026-04-28","s":6.9},{"d":"2026-04-29","s":10.8},{"d":"2026-05-04","s":11.8},{"d":"2026-05-05","s":10.5},{"d":"2026-05-06","s":7.5},{"d":"2026-05-07","s":6.2},{"d":"2026-05-08","s":4.5},{"d":"2026-05-11","s":3.4},{"d":"2026-05-12","s":2.9},{"d":"2026-05-13","s":3.1},{"d":"2026-05-14","s":2.1},{"d":"2026-05-15","s":2.3},{"d":"2026-05-18","s":0.6},{"d":"2026-05-19","s":2.9},{"d":"2026-05-20","s":2.9},{"d":"2026-05-21","s":6.4},{"d":"2026-05-22","s":13.2},{"d":"2026-05-25","s":6.9},{"d":"2026-05-26","s":10.3},{"d":"2026-05-27","s":12.1},{"d":"2026-05-28","s":18.2},{"d":"2026-05-29","s":17.9},{"d":"2026-06-01","s":24.1},{"d":"2026-06-02","s":28},{"d":"2026-06-03","s":31.8},{"d":"2026-06-04","s":23.5},{"d":"2026-06-05","s":18.2},{"d":"2026-06-08","s":33.9},{"d":"2026-06-09","s":28.2},{"d":"2026-06-10","s":23.4},{"d":"2026-06-11","s":21.7},{"d":"2026-06-12","s":25},{"d":"2026-06-15","s":17.2},{"d":"2026-06-16","s":12.5},{"d":"2026-06-17","s":12.2},{"d":"2026-06-18","s":10},{"d":"2026-06-19","s":12.4},{"d":"2026-06-22","s":8.4},{"d":"2026-06-23","s":7.7},{"d":"2026-06-24","s":7.1},{"d":"2026-06-25","s":8.3},{"d":"2026-06-26","s":6.2},{"d":"2026-06-29","s":9.8},{"d":"2026-06-30","s":11.9},{"d":"2026-07-01","s":7.8},{"d":"2026-07-02","s":7.3},{"d":"2026-07-03","s":9},{"d":"2026-07-06","s":17.1},{"d":"2026-07-07","s":11.4},{"d":"2026-07-08","s":14},{"d":"2026-07-09","s":12.6},{"d":"2026-07-10","s":18.3},{"d":"2026-07-13","s":28.4},{"d":"2026-07-14","s":20.9},{"d":"2026-07-15","s":30.8},{"d":"2026-07-16","s":28},{"d":"2026-07-17","s":25.7},{"d":"2026-07-20","s":40},{"d":"2026-07-21","s":44},{"d":"2026-07-22","s":61.4},{"d":"2026-07-23","s":53.7},{"d":"2026-07-24","s":48}]},"components":[{"id":"momentum","name":"Đà thị trường","desc":"VN-Index so với trung bình 125 phiên","score":11.5,"label":"Sợ hãi cực độ","available":true},{"id":"strength","name":"Sức mạnh giá cổ phiếu","desc":"Số mã VN30 sát đỉnh vs sát đáy 52 tuần","score":10.4,"label":"Sợ hãi cực độ","available":true},{"id":"breadth","name":"Độ lan toả dòng tiền","desc":"Giá trị khớp lệnh mã tăng vs mã giảm","score":1.7,"label":"Sợ hãi cực độ","available":true},{"id":"putcall","name":"Tâm lý phái sinh","desc":"Basis VN30F1M so với chỉ số cơ sở VN30","score":85.1,"label":"Tham lam cực độ","available":true},{"id":"volatility","name":"Biến động thị trường","desc":"Biến động thực 20 phiên so với nền 50 phiên","score":15.4,"label":"Sợ hãi cực độ","available":true},{"id":"safehaven","name":"Nhu cầu trú ẩn","desc":"Lợi suất cổ phiếu 20 phiên so với lãi suất phi rủi ro","score":6.1,"label":"Sợ hãi cực độ","available":true},{"id":"junkdemand","name":"Khẩu vị rủi ro","desc":"Thanh khoản 20 phiên so với nền 100 phiên","score":47.8,"label":"Trung tính","available":true}],"componentHistory":{"momentum":[{"d":"2026-03-18","s":27.2},{"d":"2026-03-19","s":24.4},{"d":"2026-03-20","s":14.4},{"d":"2026-03-23","s":8.7},{"d":"2026-03-24","s":11.3},{"d":"2026-03-25","s":17.3},{"d":"2026-03-26","s":14.8},{"d":"2026-03-27","s":20.3},{"d":"2026-03-30","s":18.5},{"d":"2026-03-31","s":21},{"d":"2026-04-01","s":27},{"d":"2026-04-02","s":25.3},{"d":"2026-04-03","s":23.1},{"d":"2026-04-06","s":21},{"d":"2026-04-07","s":21.9},{"d":"2026-04-08","s":36.7},{"d":"2026-04-09","s":33.6},{"d":"2026-04-10","s":35.7},{"d":"2026-04-13","s":37.1},{"d":"2026-04-14","s":39.7},{"d":"2026-04-15","s":45.8},{"d":"2026-04-16","s":50.9},{"d":"2026-04-17","s":50.2},{"d":"2026-04-20","s":56.5},{"d":"2026-04-21","s":54.5},{"d":"2026-04-22","s":62.3},{"d":"2026-04-23","s":65.8},{"d":"2026-04-24","s":60.4},{"d":"2026-04-28","s":66.7},{"d":"2026-04-29","s":59.1},{"d":"2026-05-04","s":58.8},{"d":"2026-05-05","s":65},{"d":"2026-05-06","s":68.9},{"d":"2026-05-07","s":72.1},{"d":"2026-05-08","s":73.3},{"d":"2026-05-11","s":67.9},{"d":"2026-05-12","s":69},{"d":"2026-05-13","s":67.5},{"d":"2026-05-14","s":73.5},{"d":"2026-05-15","s":71.7},{"d":"2026-05-18","s":72.6},{"d":"2026-05-19","s":67.9},{"d":"2026-05-20","s":67.3},{"d":"2026-05-21","s":61},{"d":"2026-05-22","s":52.1},{"d":"2026-05-25","s":55.4},{"d":"2026-05-26","s":54},{"d":"2026-05-27","s":48.8},{"d":"2026-05-28","s":45.3},{"d":"2026-05-29","s":44.9},{"d":"2026-06-01","s":40.5},{"d":"2026-06-02","s":35.4},{"d":"2026-06-03","s":34.2},{"d":"2026-06-04","s":36.4},{"d":"2026-06-05","s":38.4},{"d":"2026-06-08","s":28.8},{"d":"2026-06-09","s":29.2},{"d":"2026-06-10","s":31.1},{"d":"2026-06-11","s":30.3},{"d":"2026-06-12","s":28.4},{"d":"2026-06-15","s":30.5},{"d":"2026-06-16","s":32.3},{"d":"2026-06-17","s":31.9},{"d":"2026-06-18","s":36.4},{"d":"2026-06-19","s":35.1},{"d":"2026-06-22","s":42.2},{"d":"2026-06-23","s":44},{"d":"2026-06-24","s":45.7},{"d":"2026-06-25","s":42.7},{"d":"2026-06-26","s":44},{"d":"2026-06-29","s":40.5},{"d":"2026-06-30","s":41.7},{"d":"2026-07-01","s":43.3},{"d":"2026-07-02","s":42.4},{"d":"2026-07-03","s":41.5},{"d":"2026-07-06","s":36.4},{"d":"2026-07-07","s":37.3},{"d":"2026-07-08","s":38.5},{"d":"2026-07-09","s":35.5},{"d":"2026-07-10","s":33},{"d":"2026-07-13","s":27.2},{"d":"2026-07-14","s":28.3},{"d":"2026-07-15","s":24.3},{"d":"2026-07-16","s":28.4},{"d":"2026-07-17","s":25.8},{"d":"2026-07-20","s":17.5},{"d":"2026-07-21","s":15.8},{"d":"2026-07-22","s":9.1},{"d":"2026-07-23","s":12.5},{"d":"2026-07-24","s":11.5}],"strength":[{"d":"2026-03-18","s":23.6},{"d":"2026-03-19","s":23.6},{"d":"2026-03-20","s":23.6},{"d":"2026-03-23","s":27},{"d":"2026-03-24","s":27},{"d":"2026-03-25","s":27},{"d":"2026-03-26","s":27},{"d":"2026-03-27","s":27},{"d":"2026-03-30","s":34.6},{"d":"2026-03-31","s":34.6},{"d":"2026-04-01","s":34.6},{"d":"2026-04-02","s":34.6},{"d":"2026-04-03","s":34.6},{"d":"2026-04-06","s":34.6},{"d":"2026-04-07","s":34.6},{"d":"2026-04-08","s":34.6},{"d":"2026-04-09","s":34.6},{"d":"2026-04-10","s":34.6},{"d":"2026-04-13","s":34.6},{"d":"2026-04-14","s":34.6},{"d":"2026-04-15","s":34.6},{"d":"2026-04-16","s":34.6},{"d":"2026-04-17","s":34.6},{"d":"2026-04-20","s":27},{"d":"2026-04-21","s":27},{"d":"2026-04-22","s":27},{"d":"2026-04-23","s":27},{"d":"2026-04-24","s":27},{"d":"2026-04-28","s":34.9},{"d":"2026-04-29","s":34.9},{"d":"2026-05-04","s":53},{"d":"2026-05-05","s":53},{"d":"2026-05-06","s":53},{"d":"2026-05-07","s":53},{"d":"2026-05-08","s":53},{"d":"2026-05-11","s":43.2},{"d":"2026-05-12","s":43.2},{"d":"2026-05-13","s":43.2},{"d":"2026-05-14","s":43.2},{"d":"2026-05-15","s":43.2},{"d":"2026-05-18","s":34.3},{"d":"2026-05-19","s":34.3},{"d":"2026-05-20","s":34.3},{"d":"2026-05-21","s":34.3},{"d":"2026-05-22","s":34.3},{"d":"2026-05-25","s":26.4},{"d":"2026-05-26","s":26.4},{"d":"2026-05-27","s":26.4},{"d":"2026-05-28","s":26.4},{"d":"2026-05-29","s":26.4},{"d":"2026-06-01","s":26.4},{"d":"2026-06-02","s":26.4},{"d":"2026-06-03","s":26.4},{"d":"2026-06-04","s":26.4},{"d":"2026-06-05","s":26.4},{"d":"2026-06-08","s":26.4},{"d":"2026-06-09","s":26.4},{"d":"2026-06-10","s":26.4},{"d":"2026-06-11","s":26.4},{"d":"2026-06-12","s":26.4},{"d":"2026-06-15","s":34.6},{"d":"2026-06-16","s":34.6},{"d":"2026-06-17","s":34.6},{"d":"2026-06-18","s":34.6},{"d":"2026-06-19","s":34.6},{"d":"2026-06-22","s":26.4},{"d":"2026-06-23","s":26.4},{"d":"2026-06-24","s":26.4},{"d":"2026-06-25","s":26.4},{"d":"2026-06-26","s":26.4},{"d":"2026-06-29","s":26.4},{"d":"2026-06-30","s":26.4},{"d":"2026-07-01","s":26.4},{"d":"2026-07-02","s":26.4},{"d":"2026-07-03","s":26.4},{"d":"2026-07-06","s":23.2},{"d":"2026-07-07","s":23.2},{"d":"2026-07-08","s":23.2},{"d":"2026-07-09","s":23.2},{"d":"2026-07-10","s":23.2},{"d":"2026-07-13","s":19.1},{"d":"2026-07-14","s":19.1},{"d":"2026-07-15","s":19.1},{"d":"2026-07-16","s":19.1},{"d":"2026-07-17","s":19.1},{"d":"2026-07-20","s":10.4},{"d":"2026-07-21","s":10.4},{"d":"2026-07-22","s":10.4},{"d":"2026-07-23","s":10.4},{"d":"2026-07-24","s":10.4}],"breadth":[{"d":"2026-03-18","s":2.2},{"d":"2026-03-19","s":2.2},{"d":"2026-03-20","s":2.2},{"d":"2026-03-23","s":34.6},{"d":"2026-03-24","s":34.6},{"d":"2026-03-25","s":34.6},{"d":"2026-03-26","s":34.6},{"d":"2026-03-27","s":34.6},{"d":"2026-03-30","s":27.1},{"d":"2026-03-31","s":27.1},{"d":"2026-04-01","s":27.1},{"d":"2026-04-02","s":27.1},{"d":"2026-04-03","s":27.1},{"d":"2026-04-06","s":79.2},{"d":"2026-04-07","s":79.2},{"d":"2026-04-08","s":79.2},{"d":"2026-04-09","s":79.2},{"d":"2026-04-10","s":79.2},{"d":"2026-04-13","s":59.3},{"d":"2026-04-14","s":59.3},{"d":"2026-04-15","s":59.3},{"d":"2026-04-16","s":59.3},{"d":"2026-04-17","s":59.3},{"d":"2026-04-20","s":50.7},{"d":"2026-04-21","s":50.7},{"d":"2026-04-22","s":50.7},{"d":"2026-04-23","s":50.7},{"d":"2026-04-24","s":50.7},{"d":"2026-04-28","s":46.2},{"d":"2026-04-29","s":46.2},{"d":"2026-05-04","s":68.5},{"d":"2026-05-05","s":68.5},{"d":"2026-05-06","s":68.5},{"d":"2026-05-07","s":68.5},{"d":"2026-05-08","s":68.5},{"d":"2026-05-11","s":53.5},{"d":"2026-05-12","s":53.5},{"d":"2026-05-13","s":53.5},{"d":"2026-05-14","s":53.5},{"d":"2026-05-15","s":53.5},{"d":"2026-05-18","s":23.4},{"d":"2026-05-19","s":23.4},{"d":"2026-05-20","s":23.4},{"d":"2026-05-21","s":23.4},{"d":"2026-05-22","s":23.4},{"d":"2026-05-25","s":38.5},{"d":"2026-05-26","s":38.5},{"d":"2026-05-27","s":38.5},{"d":"2026-05-28","s":38.5},{"d":"2026-05-29","s":38.5},{"d":"2026-06-01","s":39.7},{"d":"2026-06-02","s":39.7},{"d":"2026-06-03","s":39.7},{"d":"2026-06-04","s":39.7},{"d":"2026-06-05","s":39.7},{"d":"2026-06-08","s":20.7},{"d":"2026-06-09","s":20.7},{"d":"2026-06-10","s":20.7},{"d":"2026-06-11","s":20.7},{"d":"2026-06-12","s":20.7},{"d":"2026-06-15","s":38.9},{"d":"2026-06-16","s":38.9},{"d":"2026-06-17","s":38.9},{"d":"2026-06-18","s":38.9},{"d":"2026-06-19","s":38.9},{"d":"2026-06-22","s":46.3},{"d":"2026-06-23","s":46.3},{"d":"2026-06-24","s":46.3},{"d":"2026-06-25","s":46.3},{"d":"2026-06-26","s":46.3},{"d":"2026-06-29","s":60.1},{"d":"2026-06-30","s":60.1},{"d":"2026-07-01","s":60.1},{"d":"2026-07-02","s":60.1},{"d":"2026-07-03","s":60.1},{"d":"2026-07-06","s":26},{"d":"2026-07-07","s":26},{"d":"2026-07-08","s":26},{"d":"2026-07-09","s":26},{"d":"2026-07-10","s":26},{"d":"2026-07-13","s":10.7},{"d":"2026-07-14","s":10.7},{"d":"2026-07-15","s":10.7},{"d":"2026-07-16","s":10.7},{"d":"2026-07-17","s":10.7},{"d":"2026-07-20","s":1.7},{"d":"2026-07-21","s":1.7},{"d":"2026-07-22","s":1.7},{"d":"2026-07-23","s":1.7},{"d":"2026-07-24","s":1.7}],"putcall":[{"d":"2026-03-18","s":95.4},{"d":"2026-03-19","s":79.7},{"d":"2026-03-20","s":80.5},{"d":"2026-03-23","s":52.6},{"d":"2026-03-24","s":78.7},{"d":"2026-03-25","s":54.9},{"d":"2026-03-26","s":69.7},{"d":"2026-03-27","s":56.9},{"d":"2026-03-30","s":40.7},{"d":"2026-03-31","s":28.6},{"d":"2026-04-01","s":96},{"d":"2026-04-02","s":61.6},{"d":"2026-04-03","s":47.3},{"d":"2026-04-06","s":90.9},{"d":"2026-04-07","s":87.7},{"d":"2026-04-08","s":92.3},{"d":"2026-04-09","s":85.8},{"d":"2026-04-10","s":72.8},{"d":"2026-04-13","s":85.9},{"d":"2026-04-14","s":57.6},{"d":"2026-04-15","s":53.8},{"d":"2026-04-16","s":66.3},{"d":"2026-04-17","s":57.5},{"d":"2026-04-20","s":11.4},{"d":"2026-04-21","s":16.4},{"d":"2026-04-22","s":96.9},{"d":"2026-04-23","s":29.4},{"d":"2026-04-24","s":75.5},{"d":"2026-04-28","s":8.5},{"d":"2026-04-29","s":82.1},{"d":"2026-05-04","s":74.2},{"d":"2026-05-05","s":85},{"d":"2026-05-06","s":85},{"d":"2026-05-07","s":63.4},{"d":"2026-05-08","s":52.1},{"d":"2026-05-11","s":48},{"d":"2026-05-12","s":31.9},{"d":"2026-05-13","s":38.7},{"d":"2026-05-14","s":39.1},{"d":"2026-05-15","s":73.7},{"d":"2026-05-18","s":64.6},{"d":"2026-05-19","s":71},{"d":"2026-05-20","s":92.4},{"d":"2026-05-21","s":76.1},{"d":"2026-05-22","s":50.9},{"d":"2026-05-25","s":61.7},{"d":"2026-05-26","s":80.6},{"d":"2026-05-27","s":69},{"d":"2026-05-28","s":14.5},{"d":"2026-05-29","s":88.3},{"d":"2026-06-01","s":63.8},{"d":"2026-06-02","s":49.9},{"d":"2026-06-03","s":43.1},{"d":"2026-06-04","s":57.5},{"d":"2026-06-05","s":34.1},{"d":"2026-06-08","s":58.1},{"d":"2026-06-09","s":45.4},{"d":"2026-06-10","s":59.9},{"d":"2026-06-11","s":82.3},{"d":"2026-06-12","s":26.7},{"d":"2026-06-15","s":70.3},{"d":"2026-06-16","s":75.3},{"d":"2026-06-17","s":70.2},{"d":"2026-06-18","s":77},{"d":"2026-06-19","s":58.4},{"d":"2026-06-22","s":79.6},{"d":"2026-06-23","s":34.6},{"d":"2026-06-24","s":46.7},{"d":"2026-06-25","s":65},{"d":"2026-06-26","s":73.2},{"d":"2026-06-29","s":82.8},{"d":"2026-06-30","s":65.4},{"d":"2026-07-01","s":58.8},{"d":"2026-07-02","s":59.7},{"d":"2026-07-03","s":85.8},{"d":"2026-07-06","s":75.5},{"d":"2026-07-07","s":71.5},{"d":"2026-07-08","s":60.6},{"d":"2026-07-09","s":88.5},{"d":"2026-07-10","s":84},{"d":"2026-07-13","s":63.3},{"d":"2026-07-14","s":35.2},{"d":"2026-07-15","s":71.8},{"d":"2026-07-16","s":21.4},{"d":"2026-07-17","s":40.1},{"d":"2026-07-20","s":84.9},{"d":"2026-07-21","s":73.1},{"d":"2026-07-22","s":95.1},{"d":"2026-07-23","s":33.9},{"d":"2026-07-24","s":85.1}],"volatility":[{"d":"2026-03-18","s":22.1},{"d":"2026-03-19","s":23.1},{"d":"2026-03-20","s":21.5},{"d":"2026-03-23","s":21.7},{"d":"2026-03-24","s":21.2},{"d":"2026-03-25","s":18.3},{"d":"2026-03-26","s":20.1},{"d":"2026-03-27","s":19.3},{"d":"2026-03-30","s":20.9},{"d":"2026-03-31","s":22},{"d":"2026-04-01","s":21.9},{"d":"2026-04-02","s":23.1},{"d":"2026-04-03","s":25.5},{"d":"2026-04-06","s":42.9},{"d":"2026-04-07","s":43.9},{"d":"2026-04-08","s":40.3},{"d":"2026-04-09","s":41},{"d":"2026-04-10","s":41.3},{"d":"2026-04-13","s":41.5},{"d":"2026-04-14","s":41.7},{"d":"2026-04-15","s":41.4},{"d":"2026-04-16","s":42.3},{"d":"2026-04-17","s":48.1},{"d":"2026-04-20","s":63.4},{"d":"2026-04-21","s":63.6},{"d":"2026-04-22","s":69.1},{"d":"2026-04-23","s":71},{"d":"2026-04-24","s":70.4},{"d":"2026-04-28","s":72.1},{"d":"2026-04-29","s":69.5},{"d":"2026-05-04","s":70.9},{"d":"2026-05-05","s":71.7},{"d":"2026-05-06","s":74.1},{"d":"2026-05-07","s":75.1},{"d":"2026-05-08","s":75.4},{"d":"2026-05-11","s":84.6},{"d":"2026-05-12","s":88.9},{"d":"2026-05-13","s":88},{"d":"2026-05-14","s":85.6},{"d":"2026-05-15","s":84.9},{"d":"2026-05-18","s":86.9},{"d":"2026-05-19","s":85.4},{"d":"2026-05-20","s":85.2},{"d":"2026-05-21","s":83.5},{"d":"2026-05-22","s":81.3},{"d":"2026-05-25","s":82.3},{"d":"2026-05-26","s":82.3},{"d":"2026-05-27","s":82.8},{"d":"2026-05-28","s":84.4},{"d":"2026-05-29","s":86.7},{"d":"2026-06-01","s":83.1},{"d":"2026-06-02","s":84.3},{"d":"2026-06-03","s":86.6},{"d":"2026-06-04","s":87.1},{"d":"2026-06-05","s":85},{"d":"2026-06-08","s":77.4},{"d":"2026-06-09","s":77.1},{"d":"2026-06-10","s":75.7},{"d":"2026-06-11","s":78.6},{"d":"2026-06-12","s":78.1},{"d":"2026-06-15","s":76.9},{"d":"2026-06-16","s":75.5},{"d":"2026-06-17","s":75},{"d":"2026-06-18","s":67.8},{"d":"2026-06-19","s":69.2},{"d":"2026-06-22","s":58.7},{"d":"2026-06-23","s":54.4},{"d":"2026-06-24","s":52.9},{"d":"2026-06-25","s":51.1},{"d":"2026-06-26","s":47.7},{"d":"2026-06-29","s":46.3},{"d":"2026-06-30","s":48.3},{"d":"2026-07-01","s":46.9},{"d":"2026-07-02","s":46.9},{"d":"2026-07-03","s":45.8},{"d":"2026-07-06","s":72.2},{"d":"2026-07-07","s":70.8},{"d":"2026-07-08","s":70.7},{"d":"2026-07-09","s":65.6},{"d":"2026-07-10","s":63.5},{"d":"2026-07-13","s":52.6},{"d":"2026-07-14","s":50.9},{"d":"2026-07-15","s":42.9},{"d":"2026-07-16","s":43.2},{"d":"2026-07-17","s":40.3},{"d":"2026-07-20","s":37.5},{"d":"2026-07-21","s":39.7},{"d":"2026-07-22","s":21.7},{"d":"2026-07-23","s":14.4},{"d":"2026-07-24","s":15.4}],"safehaven":[{"d":"2026-03-18","s":18.5},{"d":"2026-03-19","s":14},{"d":"2026-03-20","s":5.5},{"d":"2026-03-23","s":2.1},{"d":"2026-03-24","s":2.7},{"d":"2026-03-25","s":4.8},{"d":"2026-03-26","s":3.6},{"d":"2026-03-27","s":5.1},{"d":"2026-03-30","s":6.9},{"d":"2026-03-31","s":12.8},{"d":"2026-04-01","s":16.4},{"d":"2026-04-02","s":16.9},{"d":"2026-04-03","s":21.2},{"d":"2026-04-06","s":49},{"d":"2026-04-07","s":41},{"d":"2026-04-08","s":50.1},{"d":"2026-04-09","s":49.8},{"d":"2026-04-10","s":60.9},{"d":"2026-04-13","s":64.1},{"d":"2026-04-14","s":63.8},{"d":"2026-04-15","s":69.8},{"d":"2026-04-16","s":77.1},{"d":"2026-04-17","s":90.5},{"d":"2026-04-20","s":97.9},{"d":"2026-04-21","s":96.7},{"d":"2026-04-22","s":94.7},{"d":"2026-04-23","s":96.8},{"d":"2026-04-24","s":91},{"d":"2026-04-28","s":95.5},{"d":"2026-04-29","s":90.6},{"d":"2026-05-04","s":82.5},{"d":"2026-05-05","s":90},{"d":"2026-05-06","s":94.9},{"d":"2026-05-07","s":97},{"d":"2026-05-08","s":97.1},{"d":"2026-05-11","s":77.7},{"d":"2026-05-12","s":84.5},{"d":"2026-05-13","s":78.9},{"d":"2026-05-14","s":84.3},{"d":"2026-05-15","s":77.9},{"d":"2026-05-18","s":74.1},{"d":"2026-05-19","s":67},{"d":"2026-05-20","s":68},{"d":"2026-05-21","s":58.2},{"d":"2026-05-22","s":50.9},{"d":"2026-05-25","s":46},{"d":"2026-05-26","s":40.3},{"d":"2026-05-27","s":43.5},{"d":"2026-05-28","s":32.9},{"d":"2026-05-29","s":39.3},{"d":"2026-06-01","s":33.7},{"d":"2026-06-02","s":24.1},{"d":"2026-06-03","s":19.4},{"d":"2026-06-04","s":18.7},{"d":"2026-06-05","s":19},{"d":"2026-06-08","s":14.3},{"d":"2026-06-09","s":14},{"d":"2026-06-10","s":16.2},{"d":"2026-06-11","s":11.6},{"d":"2026-06-12","s":11.3},{"d":"2026-06-15","s":11.7},{"d":"2026-06-16","s":15.8},{"d":"2026-06-17","s":15.3},{"d":"2026-06-18","s":23.3},{"d":"2026-06-19","s":25.9},{"d":"2026-06-22","s":31.5},{"d":"2026-06-23","s":35.4},{"d":"2026-06-24","s":41.5},{"d":"2026-06-25","s":40.3},{"d":"2026-06-26","s":42.7},{"d":"2026-06-29","s":43.6},{"d":"2026-06-30","s":52.1},{"d":"2026-07-01","s":55.4},{"d":"2026-07-02","s":52.2},{"d":"2026-07-03","s":48.5},{"d":"2026-07-06","s":58.6},{"d":"2026-07-07","s":59.5},{"d":"2026-07-08","s":56.9},{"d":"2026-07-09","s":54.2},{"d":"2026-07-10","s":53},{"d":"2026-07-13","s":41},{"d":"2026-07-14","s":40.2},{"d":"2026-07-15","s":32.4},{"d":"2026-07-16","s":31.9},{"d":"2026-07-17","s":29.1},{"d":"2026-07-20","s":13.9},{"d":"2026-07-21","s":10.3},{"d":"2026-07-22","s":4.1},{"d":"2026-07-23","s":7.7},{"d":"2026-07-24","s":6.1}],"junkdemand":[{"d":"2026-03-18","s":67.1},{"d":"2026-03-19","s":70.7},{"d":"2026-03-20","s":72},{"d":"2026-03-23","s":73.1},{"d":"2026-03-24","s":71.7},{"d":"2026-03-25","s":70.5},{"d":"2026-03-26","s":70.4},{"d":"2026-03-27","s":69.9},{"d":"2026-03-30","s":65.1},{"d":"2026-03-31","s":62.6},{"d":"2026-04-01","s":55.5},{"d":"2026-04-02","s":53.7},{"d":"2026-04-03","s":51.4},{"d":"2026-04-06","s":45.4},{"d":"2026-04-07","s":38.7},{"d":"2026-04-08","s":39.9},{"d":"2026-04-09","s":40.1},{"d":"2026-04-10","s":39.7},{"d":"2026-04-13","s":39.7},{"d":"2026-04-14","s":40.1},{"d":"2026-04-15","s":41},{"d":"2026-04-16","s":40.9},{"d":"2026-04-17","s":38.3},{"d":"2026-04-20","s":35.9},{"d":"2026-04-21","s":36.5},{"d":"2026-04-22","s":34.5},{"d":"2026-04-23","s":37},{"d":"2026-04-24","s":35.1},{"d":"2026-04-28","s":33.8},{"d":"2026-04-29","s":33},{"d":"2026-05-04","s":31.5},{"d":"2026-05-05","s":31.1},{"d":"2026-05-06","s":32},{"d":"2026-05-07","s":34.2},{"d":"2026-05-08","s":36.7},{"d":"2026-05-11","s":34.1},{"d":"2026-05-12","s":32.1},{"d":"2026-05-13","s":30.9},{"d":"2026-05-14","s":27.8},{"d":"2026-05-15","s":27},{"d":"2026-05-18","s":26.8},{"d":"2026-05-19","s":27.2},{"d":"2026-05-20","s":33},{"d":"2026-05-21","s":32.7},{"d":"2026-05-22","s":31.4},{"d":"2026-05-25","s":30.9},{"d":"2026-05-26","s":26.5},{"d":"2026-05-27","s":27.3},{"d":"2026-05-28","s":27.6},{"d":"2026-05-29","s":27.6},{"d":"2026-06-01","s":26.4},{"d":"2026-06-02","s":26.3},{"d":"2026-06-03","s":26},{"d":"2026-06-04","s":24.1},{"d":"2026-06-05","s":22.8},{"d":"2026-06-08","s":21.9},{"d":"2026-06-09","s":21.9},{"d":"2026-06-10","s":21},{"d":"2026-06-11","s":20.7},{"d":"2026-06-12","s":21.4},{"d":"2026-06-15","s":22.3},{"d":"2026-06-16","s":20.4},{"d":"2026-06-17","s":18.8},{"d":"2026-06-18","s":19.5},{"d":"2026-06-19","s":19.7},{"d":"2026-06-22","s":20.3},{"d":"2026-06-23","s":24.8},{"d":"2026-06-24","s":24.7},{"d":"2026-06-25","s":24.6},{"d":"2026-06-26","s":24.3},{"d":"2026-06-29","s":26.6},{"d":"2026-06-30","s":26.5},{"d":"2026-07-01","s":25.7},{"d":"2026-07-02","s":26.7},{"d":"2026-07-03","s":27.9},{"d":"2026-07-06","s":28.9},{"d":"2026-07-07","s":29.7},{"d":"2026-07-08","s":31.2},{"d":"2026-07-09","s":32.6},{"d":"2026-07-10","s":32.5},{"d":"2026-07-13","s":33.4},{"d":"2026-07-14","s":32.1},{"d":"2026-07-15","s":30.1},{"d":"2026-07-16","s":31.8},{"d":"2026-07-17","s":31.2},{"d":"2026-07-20","s":38.3},{"d":"2026-07-21","s":34.7},{"d":"2026-07-22","s":41},{"d":"2026-07-23","s":45.5},{"d":"2026-07-24","s":47.8}]},"history":[{"d":"2025-11-03","s":34.6,"v":1617},{"d":"2025-11-04","s":35.7,"v":1651.98},{"d":"2025-11-05","s":34,"v":1654.89},{"d":"2025-11-06","s":30.8,"v":1642.64},{"d":"2025-11-07","s":31.7,"v":1599.1},{"d":"2025-11-10","s":31.8,"v":1580.54},{"d":"2025-11-11","s":29.4,"v":1593.61},{"d":"2025-11-12","s":34.5,"v":1631.86},{"d":"2025-11-13","s":34.6,"v":1631.44},{"d":"2025-11-14","s":35.3,"v":1635.46},{"d":"2025-11-17","s":47,"v":1654.42},{"d":"2025-11-18","s":45.2,"v":1659.92},{"d":"2025-11-19","s":43,"v":1649},{"d":"2025-11-20","s":43.9,"v":1655.99},{"d":"2025-11-21","s":38.3,"v":1654.93},{"d":"2025-11-24","s":44,"v":1667.98},{"d":"2025-11-25","s":45.1,"v":1660.36},{"d":"2025-11-26","s":48.3,"v":1680.36},{"d":"2025-11-27","s":48.4,"v":1684.32},{"d":"2025-11-28","s":51,"v":1690.99},{"d":"2025-12-01","s":55.5,"v":1701.67},{"d":"2025-12-02","s":53.1,"v":1717.06},{"d":"2025-12-03","s":56.3,"v":1731.77},{"d":"2025-12-04","s":55.5,"v":1737.24},{"d":"2025-12-05","s":60.7,"v":1741.32},{"d":"2025-12-08","s":53.8,"v":1753.74},{"d":"2025-12-09","s":50.2,"v":1747.17},{"d":"2025-12-10","s":43,"v":1718.98},{"d":"2025-12-11","s":43.5,"v":1698.9},{"d":"2025-12-12","s":42.2,"v":1646.89},{"d":"2025-12-15","s":45.1,"v":1646.01},{"d":"2025-12-16","s":50.4,"v":1679.18},{"d":"2025-12-17","s":48.6,"v":1673.66},{"d":"2025-12-18","s":45.1,"v":1676.98},{"d":"2025-12-19","s":53.9,"v":1704.31},{"d":"2025-12-22","s":60.9,"v":1751.03},{"d":"2025-12-23","s":58.8,"v":1772.15},{"d":"2025-12-24","s":56.3,"v":1782.82},{"d":"2025-12-25","s":45,"v":1742.85},{"d":"2025-12-26","s":53.7,"v":1729.8},{"d":"2025-12-29","s":55.7,"v":1754.84},{"d":"2025-12-30","s":59.2,"v":1766.9},{"d":"2025-12-31","s":55.3,"v":1784.49},{"d":"2026-01-05","s":55.7,"v":1788.4},{"d":"2026-01-06","s":64.7,"v":1816.27},{"d":"2026-01-07","s":57.2,"v":1861.58},{"d":"2026-01-08","s":63,"v":1855.56},{"d":"2026-01-09","s":61.4,"v":1867.9},{"d":"2026-01-12","s":60.3,"v":1877.33},{"d":"2026-01-13","s":61.9,"v":1902.93},{"d":"2026-01-14","s":65,"v":1894.44},{"d":"2026-01-15","s":58.5,"v":1864.8},{"d":"2026-01-16","s":65.8,"v":1879.13},{"d":"2026-01-19","s":58.2,"v":1896.59},{"d":"2026-01-20","s":56.6,"v":1893.78},{"d":"2026-01-21","s":59.5,"v":1885.44},{"d":"2026-01-22","s":64,"v":1882.73},{"d":"2026-01-23","s":57.9,"v":1870.79},{"d":"2026-01-26","s":63.7,"v":1843.72},{"d":"2026-01-27","s":62.4,"v":1830.5},{"d":"2026-01-28","s":60.3,"v":1802.91},{"d":"2026-01-29","s":60.5,"v":1814.98},{"d":"2026-01-30","s":60.5,"v":1829.04},{"d":"2026-02-02","s":46.2,"v":1806.5},{"d":"2026-02-03","s":47.4,"v":1813.4},{"d":"2026-02-04","s":49.5,"v":1791.43},{"d":"2026-02-05","s":45.3,"v":1782.56},{"d":"2026-02-06","s":44.1,"v":1755.49},{"d":"2026-02-09","s":50.2,"v":1754.82},{"d":"2026-02-10","s":50.7,"v":1754.03},{"d":"2026-02-11","s":50.7,"v":1796.85},{"d":"2026-02-12","s":49.6,"v":1814.09},{"d":"2026-02-13","s":40.9,"v":1824.09},{"d":"2026-02-23","s":51.9,"v":1860.14},{"d":"2026-02-24","s":46.2,"v":1867.62},{"d":"2026-02-25","s":46.7,"v":1860.91},{"d":"2026-02-26","s":48.1,"v":1879.64},{"d":"2026-02-27","s":45,"v":1880.33},{"d":"2026-03-02","s":44.6,"v":1846.1},{"d":"2026-03-03","s":33.8,"v":1813.14},{"d":"2026-03-04","s":41.1,"v":1818.27},{"d":"2026-03-05","s":32.6,"v":1808.51},{"d":"2026-03-06","s":32.2,"v":1767.84},{"d":"2026-03-09","s":20.3,"v":1652.79},{"d":"2026-03-10","s":26.5,"v":1676.73},{"d":"2026-03-11","s":27,"v":1728.34},{"d":"2026-03-12","s":26.7,"v":1709.61},{"d":"2026-03-13","s":24.5,"v":1696.24},{"d":"2026-03-16","s":29.4,"v":1693.21},{"d":"2026-03-17","s":34.4,"v":1710.29},{"d":"2026-03-18","s":36.6,"v":1713.83},{"d":"2026-03-19","s":33.9,"v":1699.13},{"d":"2026-03-20","s":31.4,"v":1647.81},{"d":"2026-03-23","s":31.4,"v":1591.17},{"d":"2026-03-24","s":35.3,"v":1614.77},{"d":"2026-03-25","s":32.5,"v":1658.19},{"d":"2026-03-26","s":34.3,"v":1644.63},{"d":"2026-03-27","s":33.3,"v":1672.8},{"d":"2026-03-30","s":30.5,"v":1662.54},{"d":"2026-03-31","s":29.8,"v":1674.49},{"d":"2026-04-01","s":39.8,"v":1702.93},{"d":"2026-04-02","s":34.6,"v":1694.82},{"d":"2026-04-03","s":32.9,"v":1684.04},{"d":"2026-04-06","s":51.8,"v":1674.99},{"d":"2026-04-07","s":49.6,"v":1677.54},{"d":"2026-04-08","s":53.3,"v":1756.55},{"d":"2026-04-09","s":52,"v":1736.68},{"d":"2026-04-10","s":52,"v":1750},{"d":"2026-04-13","s":51.7,"v":1758.96},{"d":"2026-04-14","s":48.1,"v":1775.65},{"d":"2026-04-15","s":49.4,"v":1800.65},{"d":"2026-04-16","s":53.1,"v":1819.83},{"d":"2026-04-17","s":54.1,"v":1817.17},{"d":"2026-04-20","s":49,"v":1837.11},{"d":"2026-04-21","s":49.3,"v":1833.48},{"d":"2026-04-22","s":62.2,"v":1857.3},{"d":"2026-04-23","s":54,"v":1870.36},{"d":"2026-04-24","s":58.6,"v":1853.29},{"d":"2026-04-28","s":51.1,"v":1875.84},{"d":"2026-04-29","s":59.3,"v":1854.1},{"d":"2026-05-04","s":62.8,"v":1854.06},{"d":"2026-05-05","s":66.3,"v":1874.85},{"d":"2026-05-06","s":68.1,"v":1891.2},{"d":"2026-05-07","s":66.2,"v":1909.01},{"d":"2026-05-08","s":65.2,"v":1915.37},{"d":"2026-05-11","s":58.4,"v":1895.5},{"d":"2026-05-12","s":57.6,"v":1901.1},{"d":"2026-05-13","s":57.2,"v":1898.37},{"d":"2026-05-14","s":58.2,"v":1925.46},{"d":"2026-05-15","s":61.7,"v":1921.6},{"d":"2026-05-18","s":54.7,"v":1927.94},{"d":"2026-05-19","s":53.7,"v":1912.93},{"d":"2026-05-20","s":57.7,"v":1913.23},{"d":"2026-05-21","s":52.7,"v":1896.89},{"d":"2026-05-22","s":46.3,"v":1877.13},{"d":"2026-05-25","s":48.7,"v":1886.03},{"d":"2026-05-26","s":49.8,"v":1884.18},{"d":"2026-05-27","s":48,"v":1874.43},{"d":"2026-05-28","s":38.5,"v":1863.67},{"d":"2026-05-29","s":50.2,"v":1863.49},{"d":"2026-06-01","s":44.8,"v":1844.54},{"d":"2026-06-02","s":40.9,"v":1826.47},{"d":"2026-06-03","s":39.3,"v":1819.01},{"d":"2026-06-04","s":41.4,"v":1831.55},{"d":"2026-06-05","s":37.9,"v":1838.9},{"d":"2026-06-08","s":35.4,"v":1790.53},{"d":"2026-06-09","s":33.5,"v":1793.05},{"d":"2026-06-10","s":35.8,"v":1803.71},{"d":"2026-06-11","s":38.7,"v":1798.61},{"d":"2026-06-12","s":30.4,"v":1791.65},{"d":"2026-06-15","s":40.8,"v":1799.31},{"d":"2026-06-16","s":41.8,"v":1807.94},{"d":"2026-06-17","s":40.7,"v":1806.2},{"d":"2026-06-18","s":42.5,"v":1830.47},{"d":"2026-06-19","s":40.3,"v":1824.53},{"d":"2026-06-22","s":43.6,"v":1857.91},{"d":"2026-06-23","s":38,"v":1869.04},{"d":"2026-06-24","s":40.6,"v":1878.02},{"d":"2026-06-25","s":42.3,"v":1863.07},{"d":"2026-06-26","s":43.5,"v":1871.91},{"d":"2026-06-29","s":46.6,"v":1854.97},{"d":"2026-06-30","s":45.8,"v":1860.01},{"d":"2026-07-01","s":45.2,"v":1867.21},{"d":"2026-07-02","s":44.9,"v":1866.35},{"d":"2026-07-03","s":48,"v":1862.08},{"d":"2026-07-06","s":45.8,"v":1843.5},{"d":"2026-07-07","s":45.4,"v":1848.25},{"d":"2026-07-08","s":43.9,"v":1853.7},{"d":"2026-07-09","s":46.5,"v":1840.7},{"d":"2026-07-10","s":45,"v":1828.34},{"d":"2026-07-13","s":35.3,"v":1800.54},{"d":"2026-07-14","s":30.9,"v":1806.63},{"d":"2026-07-15","s":33,"v":1782.12},{"d":"2026-07-16","s":26.6,"v":1804.24},{"d":"2026-07-17","s":28,"v":1787.45},{"d":"2026-07-20","s":29.2,"v":1743.51},{"d":"2026-07-21","s":26.5,"v":1730.56},{"d":"2026-07-22","s":26.2,"v":1668.53},{"d":"2026-07-23","s":18,"v":1699.38},{"d":"2026-07-24","s":25.4,"v":1686.11}],"verdict":{"confidence":{"value":30,"label":"Thấp","parts":{"coverage":100,"agreement":13.3,"evidence":97.6,"extremity":81.8},"ceiling":30,"validationNote":"Quy tắc THUA danh mục cố định cùng tỷ trọng tới 35.3 điểm % — tín hiệu chưa chứng minh được giá trị định thời điểm.","drags":["các thành phần mâu thuẫn nhau","trần tin cậy do kiểm định lịch sử"]},"confidenceAdvice":"Độ tin cậy thấp: chỉ nên coi đây là lệnh thăm dò với khoảng 1/3 quy mô. Tín hiệu chưa đủ mạnh để hành động dứt khoát.","action":"accumulate","tone":"lean-buy","title":"TÍCH LUỸ DẦN","gist":"Tâm lý còn thận trọng nhưng cấu trúc chưa gãy. Mua đều tay, không cần vội.","targetEquity":90,"profiles":{"conservative":60,"balanced":90,"aggressive":100},"weightNotes":["Dưới MA200 → giảm 5 điểm tỷ trọng","Bán tháo trong vùng định giá sợ hãi → tăng 8 điểm (vùng mua bất đối xứng)"],"why":["Chỉ số F&G 25.4/100 — Sợ hãi.","Mức hoảng loạn 48/100 — Hoảng loạn.","VN-Index đang thấp hơn MA200 4.9% — xu hướng dài hạn đã bị bẻ gãy.","Đã chiết khấu 12.5% so với đỉnh 250 phiên.","Trong quá khứ, khi F&G nằm quanh mức này (20.4–30.4, 62 phiên chồng lấn), VN-Index sau 3 tháng có trung vị +5.5%, tỷ lệ dương 79%, xấu nhất -15.8%."],"tranches":[{"pct":35,"when":"Ngay — phiên kế tiếp","detail":"Mua ở nhóm vốn hoá lớn, thanh khoản cao, nợ vay thấp. Không dùng margin."},{"pct":35,"when":"Nếu VN-Index về 1636 (−3%) hoặc F&G xuống dưới 19","detail":"Lô này chỉ kích hoạt khi thị trường giảm thêm — đây là phần thưởng cho việc chờ."},{"pct":30,"when":"Nếu VN-Index đóng cửa trên MA20 (1802) hoặc F&G bật lên trên 37","detail":"Lô xác nhận — mua khi đà giảm đã dừng, chấp nhận giá cao hơn để đổi lấy độ chắc chắn."}],"invalidation":["Dừng giải ngân nếu VN-Index đóng cửa dưới 1669 — đáy gần nhất bị xuyên thủng nghĩa là kịch bản này sai.","Dừng nếu chỉ số hoảng loạn trên 80 mà thanh khoản CẠN dần — bán tháo không có người mua thì đáy chưa hình thành.","Không dùng đòn bẩy cho bất kỳ lô nào. Kế hoạch này giả định tiền thật, không margin.","Nếu sau 3 lô mà vẫn còn tiền mặt, giữ nguyên — không có lô thứ tư."],"levels":{"last":1686.11,"ma20":1801.71,"ma50":1829.61,"ma125":1804.81,"ma200":1772.79,"hi250":1927.94,"lo250":1493.41,"swingLow":1668.53}},"baseRates":{"buckets":[{"label":"< 20","lo":null,"hi":20,"stats":{"21":{"n":13,"median":-6.2,"mean":-5.1,"hit":23.1,"p25":-8.4,"worst":-13.3,"best":5.1},"63":{"n":13,"median":1.9,"mean":2.9,"hit":69.2,"p25":-2.6,"worst":-7.1,"best":16.9},"126":{"n":13,"median":-0.5,"mean":5.3,"hit":38.5,"p25":-1.8,"worst":-3.5,"best":39.2}}},{"label":"20 – 30","lo":20,"hi":30,"stats":{"21":{"n":60,"median":1.5,"mean":-0.4,"hit":58.3,"p25":-5,"worst":-18,"best":13.3},"63":{"n":60,"median":5.4,"mean":3.8,"hit":78.3,"p25":0.6,"worst":-15.8,"best":26.4},"126":{"n":53,"median":5.2,"mean":7.6,"hit":79.2,"p25":1.8,"worst":-14.3,"best":49.9}}},{"label":"30 – 40","lo":30,"hi":40,"stats":{"21":{"n":122,"median":3.2,"mean":3.5,"hit":82.8,"p25":0.7,"worst":-11,"best":15.2},"63":{"n":113,"median":6.5,"mean":7.1,"hit":85.8,"p25":2,"worst":-10.6,"best":26.7},"126":{"n":97,"median":12.9,"mean":14.2,"hit":97.9,"p25":6.7,"worst":-2.5,"best":46}}},{"label":"40 – 50","lo":40,"hi":50,"stats":{"21":{"n":206,"median":0.8,"mean":1,"hit":57.3,"p25":-1.5,"worst":-12.8,"best":18.2},"63":{"n":191,"median":3.1,"mean":4.4,"hit":78,"p25":0.3,"worst":-13.8,"best":32.1},"126":{"n":173,"median":9.1,"mean":9.7,"hit":88.4,"p25":2.3,"worst":-4.1,"best":56.9}}},{"label":"50 – 60","lo":50,"hi":60,"stats":{"21":{"n":197,"median":-0.3,"mean":-0.1,"hit":46.7,"p25":-2.5,"worst":-13.2,"best":14.4},"63":{"n":185,"median":1.3,"mean":2.1,"hit":57.3,"p25":-1.8,"worst":-11.1,"best":22.2},"126":{"n":170,"median":4.9,"mean":6.4,"hit":82.4,"p25":2,"worst":-13.9,"best":29.3}}},{"label":"60 – 70","lo":60,"hi":70,"stats":{"21":{"n":215,"median":1.4,"mean":1.3,"hit":60.5,"p25":-2.2,"worst":-10.6,"best":13.6},"63":{"n":209,"median":1.8,"mean":4.3,"hit":60.8,"p25":-1.5,"worst":-10.8,"best":26.7},"126":{"n":202,"median":3.8,"mean":7.3,"hit":74.8,"p25":-0.1,"worst":-9.6,"best":33.3}}},{"label":"> 70","lo":70,"hi":null,"stats":{"21":{"n":124,"median":2.8,"mean":2.8,"hit":77.4,"p25":0.2,"worst":-17.7,"best":11.6},"63":{"n":124,"median":3.6,"mean":6.1,"hit":71.8,"p25":-0.7,"worst":-15.6,"best":26.7},"126":{"n":124,"median":9.6,"mean":12.1,"hit":77.4,"p25":0.7,"worst":-6.1,"best":30.3}}}],"around":{"lo":20.4,"hi":30.4,"stats":{"21":{"n":62,"median":2.4,"mean":0,"hit":59.7,"p25":-4.9,"worst":-18,"best":15.2},"63":{"n":62,"median":5.5,"mean":4.3,"hit":79,"p25":0.7,"worst":-15.8,"best":26.4},"126":{"n":56,"median":6.3,"mean":8.4,"hit":80.4,"p25":2,"worst":-14.3,"best":49.9}},"episodes":10,"daysIn":68},"horizons":[{"d":21,"label":"1 tháng"},{"d":63,"label":"3 tháng"},{"d":126,"label":"6 tháng"}],"sampleFrom":"2022-09-19","sampleTo":"2026-07-24","overlapping":true},"backtest":{"full":{"strat":{"total":-1.7,"cagr":-0.5,"maxdd":-21,"sharpe":-0.33,"calmar":-0.02},"bench":{"total":39.9,"cagr":9.2,"maxdd":-25.2,"sharpe":0.31,"calmar":0.37},"matched":{"total":33.6,"cagr":7.9,"maxdd":-15.2,"sharpe":0.31,"calmar":0.52}},"turnoverPerYear":9,"avgExposure":58.7,"periods":957,"firstHalf":{"strat":{"total":-6.1,"cagr":-3.3,"maxdd":-21,"sharpe":-0.57,"calmar":-0.16},"bench":{"total":5.6,"cagr":2.9,"maxdd":-25.2,"sharpe":0,"calmar":0.12},"matched":{"total":8.2,"cagr":4.3,"maxdd":-14.7,"sharpe":0,"calmar":0.29}},"secondHalf":{"strat":{"total":4.1,"cagr":2.1,"maxdd":-14.9,"sharpe":-0.13,"calmar":0.14},"bench":{"total":31.3,"cagr":15.4,"maxdd":-18.1,"sharpe":0.59,"calmar":0.85},"matched":{"total":23.4,"cagr":11.7,"maxdd":-11.2,"sharpe":0.59,"calmar":1.04}},"splitAt":"2024-08-21","matchedWeight":58.7,"curve":[{"d":"2025-05-16","s":0.9,"b":1.08,"f":1.11},{"d":"2025-05-20","s":0.91,"b":1.09,"f":1.12},{"d":"2025-05-22","s":0.91,"b":1.09,"f":1.12},{"d":"2025-05-26","s":0.91,"b":1.11,"f":1.13},{"d":"2025-05-28","s":0.91,"b":1.11,"f":1.14},{"d":"2025-05-30","s":0.91,"b":1.11,"f":1.13},{"d":"2025-06-03","s":0.92,"b":1.12,"f":1.14},{"d":"2025-06-05","s":0.91,"b":1.11,"f":1.14},{"d":"2025-06-09","s":0.9,"b":1.09,"f":1.12},{"d":"2025-06-11","s":0.91,"b":1.09,"f":1.12},{"d":"2025-06-13","s":0.91,"b":1.09,"f":1.12},{"d":"2025-06-17","s":0.92,"b":1.12,"f":1.14},{"d":"2025-06-19","s":0.92,"b":1.12,"f":1.14},{"d":"2025-06-23","s":0.92,"b":1.13,"f":1.15},{"d":"2025-06-25","s":0.92,"b":1.13,"f":1.15},{"d":"2025-06-27","s":0.93,"b":1.14,"f":1.15},{"d":"2025-07-01","s":0.93,"b":1.14,"f":1.16},{"d":"2025-07-03","s":0.93,"b":1.15,"f":1.16},{"d":"2025-07-07","s":0.94,"b":1.16,"f":1.17},{"d":"2025-07-09","s":0.94,"b":1.19,"f":1.18},{"d":"2025-07-11","s":0.95,"b":1.21,"f":1.2},{"d":"2025-07-15","s":0.95,"b":1.21,"f":1.2},{"d":"2025-07-17","s":0.96,"b":1.24,"f":1.21},{"d":"2025-07-21","s":0.96,"b":1.23,"f":1.21},{"d":"2025-07-23","s":0.96,"b":1.25,"f":1.22},{"d":"2025-07-25","s":0.97,"b":1.27,"f":1.23},{"d":"2025-07-29","s":0.95,"b":1.24,"f":1.21},{"d":"2025-07-31","s":0.96,"b":1.25,"f":1.22},{"d":"2025-08-04","s":0.96,"b":1.27,"f":1.23},{"d":"2025-08-06","s":0.98,"b":1.31,"f":1.25},{"d":"2025-08-08","s":0.98,"b":1.31,"f":1.26},{"d":"2025-08-12","s":0.99,"b":1.33,"f":1.27},{"d":"2025-08-14","s":1,"b":1.36,"f":1.28},{"d":"2025-08-18","s":0.99,"b":1.36,"f":1.28},{"d":"2025-08-20","s":1,"b":1.38,"f":1.3},{"d":"2025-08-22","s":1,"b":1.37,"f":1.29},{"d":"2025-08-26","s":1,"b":1.38,"f":1.3},{"d":"2025-08-28","s":1.01,"b":1.39,"f":1.3},{"d":"2025-09-03","s":1.01,"b":1.39,"f":1.3},{"d":"2025-09-05","s":1,"b":1.38,"f":1.3},{"d":"2025-09-09","s":0.99,"b":1.36,"f":1.28},{"d":"2025-09-11","s":1,"b":1.38,"f":1.29},{"d":"2025-09-15","s":1.01,"b":1.4,"f":1.31},{"d":"2025-09-17","s":1,"b":1.39,"f":1.3},{"d":"2025-09-19","s":1,"b":1.38,"f":1.3},{"d":"2025-09-23","s":0.99,"b":1.36,"f":1.29},{"d":"2025-09-25","s":1,"b":1.38,"f":1.3},{"d":"2025-09-29","s":1,"b":1.38,"f":1.3},{"d":"2025-10-01","s":1,"b":1.38,"f":1.3},{"d":"2025-10-03","s":0.99,"b":1.37,"f":1.29},{"d":"2025-10-07","s":1.01,"b":1.4,"f":1.31},{"d":"2025-10-09","s":1.02,"b":1.42,"f":1.32},{"d":"2025-10-13","s":1.04,"b":1.46,"f":1.35},{"d":"2025-10-15","s":1.04,"b":1.46,"f":1.34},{"d":"2025-10-17","s":1.03,"b":1.44,"f":1.33},{"d":"2025-10-21","s":1,"b":1.38,"f":1.3},{"d":"2025-10-23","s":1.01,"b":1.4,"f":1.31},{"d":"2025-10-27","s":1,"b":1.37,"f":1.3},{"d":"2025-10-29","s":1.01,"b":1.4,"f":1.31},{"d":"2025-10-31","s":0.99,"b":1.36,"f":1.29},{"d":"2025-11-04","s":1,"b":1.37,"f":1.3},{"d":"2025-11-06","s":1,"b":1.36,"f":1.29},{"d":"2025-11-10","s":0.96,"b":1.31,"f":1.26},{"d":"2025-11-12","s":0.99,"b":1.35,"f":1.29},{"d":"2025-11-14","s":0.99,"b":1.36,"f":1.29},{"d":"2025-11-18","s":1,"b":1.38,"f":1.3},{"d":"2025-11-20","s":1,"b":1.37,"f":1.3},{"d":"2025-11-24","s":1.01,"b":1.38,"f":1.31},{"d":"2025-11-26","s":1.01,"b":1.39,"f":1.31},{"d":"2025-11-28","s":1.02,"b":1.4,"f":1.32},{"d":"2025-12-02","s":1.03,"b":1.42,"f":1.33},{"d":"2025-12-04","s":1.04,"b":1.44,"f":1.34},{"d":"2025-12-08","s":1.04,"b":1.45,"f":1.35},{"d":"2025-12-10","s":1.03,"b":1.43,"f":1.33},{"d":"2025-12-12","s":1,"b":1.37,"f":1.3},{"d":"2025-12-16","s":1.01,"b":1.39,"f":1.31},{"d":"2025-12-18","s":1.01,"b":1.39,"f":1.31},{"d":"2025-12-22","s":1.04,"b":1.45,"f":1.35},{"d":"2025-12-24","s":1.05,"b":1.48,"f":1.36},{"d":"2025-12-26","s":1.03,"b":1.44,"f":1.34},{"d":"2025-12-30","s":1.04,"b":1.47,"f":1.35},{"d":"2026-01-05","s":1.05,"b":1.48,"f":1.36},{"d":"2026-01-07","s":1.07,"b":1.54,"f":1.4},{"d":"2026-01-09","s":1.07,"b":1.55,"f":1.4},{"d":"2026-01-13","s":1.09,"b":1.58,"f":1.42},{"d":"2026-01-15","s":1.07,"b":1.55,"f":1.4},{"d":"2026-01-19","s":1.08,"b":1.57,"f":1.41},{"d":"2026-01-21","s":1.08,"b":1.56,"f":1.41},{"d":"2026-01-23","s":1.08,"b":1.55,"f":1.4},{"d":"2026-01-27","s":1.06,"b":1.52,"f":1.39},{"d":"2026-01-29","s":1.06,"b":1.51,"f":1.38},{"d":"2026-02-02","s":1.06,"b":1.5,"f":1.38},{"d":"2026-02-04","s":1.05,"b":1.49,"f":1.37},{"d":"2026-02-06","s":1.04,"b":1.46,"f":1.35},{"d":"2026-02-10","s":1.03,"b":1.46,"f":1.35},{"d":"2026-02-12","s":1.06,"b":1.5,"f":1.38},{"d":"2026-02-23","s":1.08,"b":1.54,"f":1.4},{"d":"2026-02-25","s":1.08,"b":1.54,"f":1.4},{"d":"2026-02-27","s":1.09,"b":1.56,"f":1.41},{"d":"2026-03-03","s":1.06,"b":1.5,"f":1.38},{"d":"2026-03-05","s":1.06,"b":1.5,"f":1.38},{"d":"2026-03-09","s":0.98,"b":1.37,"f":1.31},{"d":"2026-03-11","s":1.02,"b":1.43,"f":1.34},{"d":"2026-03-13","s":1,"b":1.41,"f":1.33},{"d":"2026-03-17","s":1.01,"b":1.42,"f":1.34},{"d":"2026-03-19","s":1.01,"b":1.41,"f":1.33},{"d":"2026-03-23","s":0.96,"b":1.32,"f":1.28},{"d":"2026-03-25","s":0.99,"b":1.38,"f":1.31},{"d":"2026-03-27","s":0.99,"b":1.39,"f":1.32},{"d":"2026-03-31","s":0.99,"b":1.39,"f":1.32},{"d":"2026-04-02","s":1,"b":1.41,"f":1.33},{"d":"2026-04-06","s":0.99,"b":1.39,"f":1.32},{"d":"2026-04-08","s":1.02,"b":1.46,"f":1.36},{"d":"2026-04-10","s":1.02,"b":1.45,"f":1.36},{"d":"2026-04-14","s":1.03,"b":1.47,"f":1.37},{"d":"2026-04-16","s":1.05,"b":1.51,"f":1.39},{"d":"2026-04-20","s":1.06,"b":1.52,"f":1.4},{"d":"2026-04-22","s":1.06,"b":1.54,"f":1.41},{"d":"2026-04-24","s":1.06,"b":1.54,"f":1.4},{"d":"2026-04-29","s":1.06,"b":1.54,"f":1.41},{"d":"2026-05-05","s":1.07,"b":1.56,"f":1.41},{"d":"2026-05-07","s":1.08,"b":1.58,"f":1.43},{"d":"2026-05-11","s":1.07,"b":1.57,"f":1.42},{"d":"2026-05-13","s":1.07,"b":1.57,"f":1.43},{"d":"2026-05-15","s":1.08,"b":1.59,"f":1.44},{"d":"2026-05-19","s":1.08,"b":1.59,"f":1.43},{"d":"2026-05-21","s":1.07,"b":1.57,"f":1.43},{"d":"2026-05-25","s":1.07,"b":1.56,"f":1.42},{"d":"2026-05-27","s":1.07,"b":1.55,"f":1.42},{"d":"2026-05-29","s":1.06,"b":1.55,"f":1.41},{"d":"2026-06-02","s":1.05,"b":1.52,"f":1.4},{"d":"2026-06-04","s":1.05,"b":1.52,"f":1.4},{"d":"2026-06-08","s":1.03,"b":1.49,"f":1.38},{"d":"2026-06-10","s":1.04,"b":1.5,"f":1.39},{"d":"2026-06-12","s":1.03,"b":1.49,"f":1.38},{"d":"2026-06-16","s":1.04,"b":1.5,"f":1.39},{"d":"2026-06-18","s":1.05,"b":1.52,"f":1.4},{"d":"2026-06-22","s":1.06,"b":1.54,"f":1.41},{"d":"2026-06-24","s":1.07,"b":1.56,"f":1.42},{"d":"2026-06-26","s":1.07,"b":1.55,"f":1.42},{"d":"2026-06-30","s":1.06,"b":1.54,"f":1.41},{"d":"2026-07-02","s":1.07,"b":1.55,"f":1.42},{"d":"2026-07-06","s":1.06,"b":1.53,"f":1.41},{"d":"2026-07-08","s":1.06,"b":1.54,"f":1.41},{"d":"2026-07-10","s":1.05,"b":1.52,"f":1.4},{"d":"2026-07-14","s":1.04,"b":1.5,"f":1.39},{"d":"2026-07-16","s":1.04,"b":1.5,"f":1.39},{"d":"2026-07-20","s":1.01,"b":1.45,"f":1.36},{"d":"2026-07-22","s":0.98,"b":1.38,"f":1.33},{"d":"2026-07-24","s":0.98,"b":1.4,"f":1.34}]}};
+</script>
+<script>/* ---- ui.js ---- */
+/* =============================================================================
+   VN Fear & Greed Index — UI
+   Rendering only. Every dynamic string goes in via textContent, never innerHTML,
+   so nothing that arrives from the network can execute.
+   ========================================================================== */
+'use strict';
+
+(function (E, D) {
+
+/* --------------------------------------------------------------- utilities */
+
+const $ = id => document.getElementById(id);
+const isNum = x => typeof x === 'number' && Number.isFinite(x);
+const dash = '—';
+
+const fmt = (x, d = 1) => (isNum(x) ? x.toFixed(d) : dash);
+const fmtSigned = (x, d = 1) => (isNum(x) ? (x > 0 ? '+' : '') + x.toFixed(d) : dash);
+const fmtPct = (x, d = 1) => (isNum(x) ? fmtSigned(x, d) + '%' : dash);
+const fmtInt = x => (isNum(x) ? Math.round(x).toLocaleString('vi-VN') : dash);
+
+function el(tag, cls, text) {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text !== undefined && text !== null) n.textContent = String(text);
+  return n;
+}
+function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
+function setText(id, text) { const n = $(id); if (n) n.textContent = text; }
+
+const ZONE_COLOR = {
+  'extreme-fear': '#0b1220', fear: '#41586e', neutral: '#7b8ea1',
+  greed: '#0891b2', 'extreme-greed': '#155e75', unknown: '#8fa0b3',
+};
+const zoneColor = s => ZONE_COLOR[E.zoneOf(s).key] || ZONE_COLOR.unknown;
+
+const charts = {};
+function mountChart(id, config) {
+  const canvas = $(id);
+  if (!canvas || typeof Chart === 'undefined') return;
+  if (charts[id]) charts[id].destroy();
+  charts[id] = new Chart(canvas.getContext('2d'), config);
+}
+
+const BASE_CHART = {
+  responsive: true, maintainAspectRatio: false,
+  interaction: { mode: 'index', intersect: false },
+  plugins: { legend: { display: false } },
+  elements: { point: { radius: 0 } },
+};
+const AXIS = {
+  grid: { color: '#eef2f6', drawTicks: false },
+  border: { display: false },
+  ticks: { color: '#8fa0b3', font: { family: 'IBM Plex Mono', size: 9 }, maxRotation: 0, autoSkipPadding: 24 },
+};
+
+/* -------------------------------------------------------------- the gauge */
+
+function renderGauge(score) {
+  const svg = $('gauge');
+  if (!svg) return;
+  clear(svg);
+  const NS = 'http://www.w3.org/2000/svg';
+  const cx = 200, cy = 200, rOuter = 150, rInner = 112;
+  const bands = [
+    [0, 25, ZONE_COLOR['extreme-fear']], [25, 45, ZONE_COLOR.fear],
+    [45, 55, ZONE_COLOR.neutral], [55, 75, ZONE_COLOR.greed],
+    [75, 100, ZONE_COLOR['extreme-greed']],
+  ];
+  const ang = v => Math.PI * (1 - v / 100);
+  const pt = (r, a) => [cx + r * Math.cos(a), cy - r * Math.sin(a)];
+
+  for (const [a0, a1, color] of bands) {
+    const s = ang(a0), e = ang(a1);
+    const [x1, y1] = pt(rOuter, s), [x2, y2] = pt(rOuter, e);
+    const [x3, y3] = pt(rInner, e), [x4, y4] = pt(rInner, s);
+    const p = document.createElementNS(NS, 'path');
+    p.setAttribute('d', `M${x1},${y1} A${rOuter},${rOuter} 0 0 1 ${x2},${y2} L${x3},${y3} A${rInner},${rInner} 0 0 0 ${x4},${y4} Z`);
+    p.setAttribute('fill', color);
+    svg.appendChild(p);
+  }
+
+  for (const v of [0, 25, 45, 55, 75, 100]) {
+    const [tx, ty] = pt(rOuter + 16, ang(v));
+    const t = document.createElementNS(NS, 'text');
+    t.setAttribute('x', tx); t.setAttribute('y', ty + 4);
+    t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('font-family', 'IBM Plex Mono, monospace');
+    t.setAttribute('font-size', '11'); t.setAttribute('fill', '#8fa0b3');
+    t.textContent = String(v);
+    svg.appendChild(t);
+  }
+
+  if (!isNum(score)) return;
+  const a = ang(Math.max(0, Math.min(100, score)));
+  const [nx, ny] = pt(rOuter - 6, a);
+  const [bx1, by1] = pt(9, a - Math.PI / 2);
+  const [bx2, by2] = pt(9, a + Math.PI / 2);
+  const needle = document.createElementNS(NS, 'path');
+  needle.setAttribute('d', `M${bx1},${by1} L${nx},${ny} L${bx2},${by2} Z`);
+  needle.setAttribute('fill', '#0b1220');
+  svg.appendChild(needle);
+  const hub = document.createElementNS(NS, 'circle');
+  hub.setAttribute('cx', cx); hub.setAttribute('cy', cy); hub.setAttribute('r', 9);
+  hub.setAttribute('fill', '#fff'); hub.setAttribute('stroke', '#0b1220'); hub.setAttribute('stroke-width', '3');
+  svg.appendChild(hub);
+}
+
+/* ------------------------------------------------------------- the verdict */
+
+const PANIC_PART_LABEL = {
+  drawdown: 'Chiết khấu từ đỉnh', belowTrend: 'Dưới xu hướng MA200',
+  volumeClimax: 'Vỡ khối lượng', downDays: 'Mật độ phiên giảm',
+  velocity: 'Tốc độ giảm', volatility: 'Biến động thực',
+};
+
+const LEVEL_LABEL = {
+  last: 'Đóng cửa', ma20: 'MA20', ma50: 'MA50', ma125: 'MA125',
+  ma200: 'MA200', hi250: 'Đỉnh 250P', lo250: 'Đáy 250P', swingLow: 'Đáy gần nhất',
+};
+
+const CONF_PART_LABEL = {
+  coverage: 'Dữ liệu đầy đủ', agreement: 'Thành phần đồng thuận',
+  evidence: 'Bằng chứng lịch sử', extremity: 'Độ cực trị của chỉ số',
+};
+const CONF_COLOR = v => (v >= 70 ? '#0f766e' : v >= 50 ? '#0891b2' : v >= 30 ? '#b45309' : '#b91c1c');
+
+function renderConfidence(v) {
+  const c = v.confidence;
+  const box = $('confBox');
+  if (!c || !isNum(c.value)) { if (box) box.style.display = 'none'; return; }
+  if (box) box.style.display = '';
+
+  setText('confVal', fmt(c.value, 0));
+  const lab = $('confLabel');
+  lab.textContent = c.label || dash;
+  lab.style.color = CONF_COLOR(c.value);
+  $('confVal').style.color = CONF_COLOR(c.value);
+
+  const fill = $('confFill');
+  fill.style.width = Math.max(1, Math.min(100, c.value)) + '%';
+  fill.style.background = CONF_COLOR(c.value);
+  const ceil = $('confCeil');
+  if (isNum(c.ceiling)) { ceil.style.left = c.ceiling + '%'; ceil.style.display = ''; }
+  else ceil.style.display = 'none';
+
+  setText('confAdvice', v.confidenceAdvice || '');
+  $('confAdvice').style.color = CONF_COLOR(c.value);
+
+  const parts = $('confParts');
+  clear(parts);
+  Object.keys(CONF_PART_LABEL).forEach(k => {
+    const val = c.parts ? c.parts[k] : null;
+    const chip = el('span', 'cp' + (isNum(val) && val < 45 ? ' low' : ''));
+    chip.appendChild(document.createTextNode(CONF_PART_LABEL[k] + ' '));
+    chip.appendChild(el('b', null, fmt(val, 0)));
+    parts.appendChild(chip);
+  });
+
+  const bits = [];
+  if (c.validationNote) bits.push(c.validationNote);
+  if (c.drags && c.drags.length) bits.push('Yếu tố kéo giảm độ tin cậy: ' + c.drags.join(', ') + '.');
+  if (isNum(c.ceiling)) bits.push(`Trần tin cậy ${c.ceiling}% (vạch đỏ) được đặt tự động từ kết quả kiểm định lịch sử — không phải con số chọn tuỳ ý.`);
+  setText('confNote', bits.join(' '));
+}
+
+function renderVerdict(d) {
+  const v = d.verdict;
+  const root = $('verdict');
+  root.className = 'verdict tone-' + (v.tone || 'neutral');
+
+  setText('vTitle', v.title);
+  setText('vGist', v.gist);
+
+  setText('qFG', fmt(d.score));
+  setText('qFGs', d.label || dash);
+  setText('qPanic', fmt(d.panic && d.panic.score));
+  setText('qPanics', (d.panic && d.panic.label) || dash);
+  setText('qWeight', isNum(v.targetEquity) ? v.targetEquity + '%' : dash);
+  setText('qDD', isNum(d.vnindex.drawdown_pct) ? fmt(d.vnindex.drawdown_pct, 1) + '%' : dash);
+
+  renderConfidence(v);
+
+  const why = $('vWhy');
+  clear(why);
+  (v.why || []).forEach(w => why.appendChild(el('li', null, w)));
+
+  const levels = $('vLevels');
+  clear(levels);
+  Object.keys(LEVEL_LABEL).forEach(k => {
+    const val = v.levels ? v.levels[k] : null;
+    const box = el('div', 'lv');
+    box.appendChild(el('div', 't', LEVEL_LABEL[k]));
+    box.appendChild(el('div', 'v', fmtInt(val)));
+    levels.appendChild(box);
+  });
+
+  const isSell = v.tone === 'sell' || v.tone === 'lean-sell';
+  setText('vPlanTitle', isSell ? 'Kế hoạch hạ tỷ trọng' : 'Kế hoạch chia lô giải ngân');
+
+  const tr = $('vTranches');
+  clear(tr);
+  if (!v.tranches || !v.tranches.length) {
+    tr.appendChild(el('div', 'td', 'Không có hành động nào được đề xuất ở vùng này. Giữ nguyên danh mục hiện tại.'));
+  } else {
+    const gapWord = isSell ? 'phần cần bán' : 'phần còn thiếu';
+    const head = el('div', 'td');
+    head.style.marginBottom = '10px';
+    head.textContent = `Các tỷ lệ dưới đây tính trên ${gapWord} — tức khoảng cách giữa tỷ trọng hiện tại của bạn và mức đề xuất ${isNum(v.targetEquity) ? v.targetEquity + '%' : ''}.`;
+    tr.appendChild(head);
+    v.tranches.forEach((t, i) => {
+      const row = el('div', 'tranche');
+      const no = el('div', 'tno');
+      no.appendChild(el('b', null, t.pct + '%'));
+      no.appendChild(el('i', null, 'lô ' + (i + 1)));
+      const body = el('div', 'tbody');
+      body.appendChild(el('div', 'tw', t.when));
+      body.appendChild(el('div', 'td', t.detail));
+      row.appendChild(no); row.appendChild(body);
+      tr.appendChild(row);
+    });
+  }
+
+  const stops = $('vStops');
+  clear(stops);
+  (v.invalidation || []).forEach(s => stops.appendChild(el('li', null, s)));
+}
+
+/* ---------------------------------------------------------------- header */
+
+function renderHeader(d, mode) {
+  const vni = d.vnindex || {};
+  const badge = $('vniBadge');
+  badge.textContent = 'VN-INDEX ' + fmtInt(vni.last) + '  ' + fmtPct(vni.chg_pct, 2);
+  badge.className = 'badge ' + (isNum(vni.chg_pct) ? (vni.chg_pct >= 0 ? 'up' : 'down') : '');
+  setText('dateBadge', d.updated || dash);
+
+  const status = $('statusBadge');
+  const ageDays = d.updated ? (Date.now() - Date.parse(d.updated + 'T00:00:00Z')) / 86400000 : Infinity;
+  const stale = ageDays > 5;
+  if (mode === 'live' && !stale) { status.textContent = 'LIVE'; status.className = 'badge live'; }
+  else if (stale) { status.textContent = 'DỮ LIỆU CŨ'; status.className = 'badge stale'; }
+  else { status.textContent = 'SNAPSHOT'; status.className = 'badge'; }
+
+  setText('footLeft', 'Cập nhật ' + (d.updated || dash) + ' · ' +
+    (mode === 'live' ? 'tính trực tiếp trên trình duyệt' : 'bản nhúng sẵn'));
+}
+
+function renderQuality(d, meta) {
+  const note = $('qualityNote');
+  const q = d.dataQuality || {};
+  const msgs = [];
+  if (isNum(q.coverage) && q.coverage < 1) {
+    const names = (q.missing || []).map(m => (E.META[m] ? E.META[m][0] : m)).join(', ');
+    msgs.push(`Chỉ ${Math.round(q.coverage * 7)}/7 thành phần hợp lệ (thiếu: ${names}). Trọng số đã được chia lại cho các thành phần còn lại — độ tin cậy của chỉ số thấp hơn bình thường.`);
+  }
+  if (meta && isNum(meta.stocksOk) && meta.stocksOk < meta.stocksTotal) {
+    msgs.push(`Chỉ tải được ${meta.stocksOk}/${meta.stocksTotal} cổ phiếu VN30${meta.stocksFailed && meta.stocksFailed.length ? ' (lỗi: ' + meta.stocksFailed.join(', ') + ')' : ''}.`);
+  }
+  if (meta && meta.futOk === false) msgs.push('Không tải được dữ liệu phái sinh VN30F1M — thành phần tâm lý phái sinh bị loại.');
+  if (msgs.length) { note.textContent = msgs.join(' '); note.hidden = false; }
+  else note.hidden = true;
+}
+
+/* ------------------------------------------------------------ gauge panel */
+
+function renderScorePanel(d) {
+  renderGauge(d.score);
+  const big = $('scoreBig');
+  big.textContent = fmt(d.score);
+  big.style.color = zoneColor(d.score);
+  const lab = $('scoreLabel');
+  lab.textContent = d.label || dash;
+  lab.style.color = zoneColor(d.score);
+
+  const p = d.previous || {};
+  setText('pClose', fmt(p.close));
+  setText('pWeek', fmt(p.week));
+  setText('pMonth', fmt(p.month));
+  setText('pYear', fmt(p.year));
+
+  const panic = d.panic || {};
+  setText('panicVal', isNum(panic.score) ? fmt(panic.score) + ' / 100 · ' + panic.label : dash);
+  const fill = $('panicFill');
+  fill.style.width = (isNum(panic.score) ? Math.max(1, Math.min(100, panic.score)) : 0) + '%';
+
+  const parts = $('panicParts');
+  clear(parts);
+  Object.keys(PANIC_PART_LABEL).forEach(k => {
+    const val = panic.parts ? panic.parts[k] : null;
+    const row = el('div', 'pp');
+    row.appendChild(el('span', null, PANIC_PART_LABEL[k]));
+    row.appendChild(el('b', null, fmt(val, 0)));
+    parts.appendChild(row);
+  });
+}
+
+/* ---------------------------------------------------------------- charts */
+
+function renderHistory(d) {
+  const h = d.history || [];
+  if (!h.length) return;
+  mountChart('histChart', {
+    type: 'line',
+    data: {
+      labels: h.map(x => x.d),
+      datasets: [
+        { label: 'F&G', data: h.map(x => x.s), borderColor: '#0891b2', borderWidth: 1.8,
+          yAxisID: 'y', tension: .25, fill: false },
+        { label: 'VN-Index', data: h.map(x => x.v), borderColor: '#0b1220', borderWidth: 1.2,
+          yAxisID: 'y1', tension: .25, fill: false, borderDash: [3, 3] },
+      ],
+    },
+    options: {
+      ...BASE_CHART,
+      plugins: {
+        legend: { display: true, labels: { boxWidth: 10, font: { family: 'IBM Plex Mono', size: 10 }, color: '#5b6b7c' } },
+        tooltip: { callbacks: { label: c => `${c.dataset.label}: ${fmt(c.parsed.y, c.datasetIndex ? 0 : 1)}` } },
+      },
+      scales: {
+        x: { ...AXIS, ticks: { ...AXIS.ticks, maxTicksLimit: 7 } },
+        y: { ...AXIS, position: 'left', min: 0, max: 100, ticks: { ...AXIS.ticks, stepSize: 25 } },
+        y1: { ...AXIS, position: 'right', grid: { display: false } },
+      },
+    },
+  });
+
+  const p = (d.panic && d.panic.history) || [];
+  if (p.length) {
+    mountChart('panicChart', {
+      type: 'line',
+      data: {
+        labels: p.map(x => x.d),
+        datasets: [{
+          data: p.map(x => x.s), borderColor: '#b4442c', borderWidth: 1.4,
+          backgroundColor: 'rgba(180,68,44,.10)', fill: true, tension: .25,
+        }],
+      },
+      options: {
+        ...BASE_CHART,
+        scales: {
+          x: { ...AXIS, ticks: { ...AXIS.ticks, maxTicksLimit: 6 } },
+          y: { ...AXIS, min: 0, max: 100, ticks: { ...AXIS.ticks, stepSize: 50 } },
+        },
+      },
+    });
+  }
+}
+
+/* ------------------------------------------------------------ components */
+
+function renderComponents(d) {
+  const wrap = $('comps');
+  clear(wrap);
+  (d.components || []).forEach(c => {
+    const box = el('div', 'comp' + (c.available === false ? ' off' : ''));
+
+    const top = el('div', 'top');
+    top.appendChild(el('h3', null, c.name));
+    const pill = el('span', 'pill', c.available === false ? 'THIẾU DỮ LIỆU' : (c.label || dash));
+    pill.style.color = c.available === false ? '#8fa0b3' : zoneColor(c.score);
+    top.appendChild(pill);
+    box.appendChild(top);
+
+    box.appendChild(el('div', 'desc', c.desc));
+
+    const row = el('div', 'row');
+    const sc = el('div', 'score', fmt(c.score));
+    sc.style.color = c.available === false ? '#8fa0b3' : zoneColor(c.score);
+    row.appendChild(sc);
+    const cv = document.createElement('canvas');
+    cv.className = 'spark';
+    cv.id = 'spark-' + c.id;
+    row.appendChild(cv);
+    box.appendChild(row);
+
+    const bar = el('div', 'bar');
+    const b = el('b'); b.style.width = (isNum(c.score) ? Math.max(0, Math.min(100, c.score)) : 0) + '%';
+    b.style.background = zoneColor(c.score);
+    const i = el('i'); i.style.left = '50%';
+    bar.appendChild(b); bar.appendChild(i);
+    box.appendChild(bar);
+
+    wrap.appendChild(box);
+  });
+
+  (d.components || []).forEach(c => {
+    const hist = (d.componentHistory && d.componentHistory[c.id]) || [];
+    if (!hist.length) return;
+    mountChart('spark-' + c.id, {
+      type: 'line',
+      data: {
+        labels: hist.map(x => x.d),
+        datasets: [{
+          data: hist.map(x => x.s), borderColor: zoneColor(c.score), borderWidth: 1.3,
+          tension: .3, fill: false, spanGaps: true,
+        }],
+      },
+      options: {
+        ...BASE_CHART,
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        scales: { x: { display: false }, y: { display: false, min: 0, max: 100 } },
+      },
+    });
+  });
+}
+
+/* ------------------------------------------------------------- base rates */
+
+let brHorizon = 63;
+
+function renderBaseRates(d) {
+  const br = d.baseRates;
+  const tbody = $('brTable').querySelector('tbody');
+  clear(tbody);
+  if (!br || !br.buckets) return;
+
+  const cur = d.score;
+  br.buckets.forEach(b => {
+    const s = b.stats ? b.stats[brHorizon] : null;
+    const tr = document.createElement('tr');
+    if (isNum(cur) && cur >= b.lo && cur < b.hi) tr.className = 'here';
+
+    const cells = [
+      b.label,
+      s ? fmtInt(s.n) : dash,
+      s ? fmtPct(s.median) : dash,
+      s ? fmtPct(s.mean) : dash,
+      s ? fmt(s.hit, 0) + '%' : dash,
+      s ? fmtPct(s.p25) : dash,
+      s ? fmtPct(s.worst) : dash,
+      s ? fmtPct(s.best) : dash,
+    ];
+    cells.forEach((text, i) => {
+      const td = el('td', null, text);
+      if (s && (i === 2 || i === 3 || i === 5 || i === 6 || i === 7)) {
+        const raw = [null, null, s.median, s.mean, null, s.p25, s.worst, s.best][i];
+        if (isNum(raw)) td.className = raw >= 0 ? 'pos' : 'neg';
+      }
+      if (s && i === 1 && s.n < 20) td.className = 'thin';
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+
+  const a = br.around;
+  const hl = $('brHighlight');
+  if (a && a.stats && a.stats[brHorizon] && a.stats[brHorizon].n >= 5) {
+    const s = a.stats[brHorizon];
+    const hLabel = (E.HORIZONS.find(h => h.d === brHorizon) || {}).label || '';
+    hl.textContent =
+      `Chỉ số hiện tại ${fmt(d.score)}. Trong quá khứ (${br.sampleFrom} → ${br.sampleTo}), những phiên có chỉ số nằm trong khoảng ${a.lo}–${a.hi} — ${fmtInt(s.n)} phiên chồng lấn — VN-Index sau ${hLabel} có trung vị ${fmtPct(s.median)}, tỷ lệ dương ${fmt(s.hit, 0)}%, phân vị 25 ở ${fmtPct(s.p25)} và trường hợp xấu nhất ${fmtPct(s.worst)}.`;
+    hl.hidden = false;
+  } else {
+    hl.textContent = 'Chưa đủ dữ liệu lịch sử quanh mức chỉ số hiện tại để đưa ra tỷ lệ cơ sở đáng tin cậy.';
+    hl.hidden = false;
+  }
+
+  setText('brFoot',
+    `Mẫu: ${br.sampleFrom} → ${br.sampleTo}. Các cửa sổ quan sát chồng lấn nhau, nên "số phiên" phản ánh độ dày dữ liệu chứ không phải số lần thử độc lập — hãy hiểu vài trăm phiên trong cùng một vùng có thể chỉ tương ứng vài đợt thị trường thật sự. Dữ liệu chưa bao gồm các chu kỳ trước 2020.`);
+}
+
+/* ------------------------------------------------- allocation + backtest */
+
+let profile = 'balanced';
+
+function renderAllocation(d) {
+  const v = d.verdict;
+  const w = v.profiles ? v.profiles[profile] : v.targetEquity;
+  const eq = isNum(w) ? w : 0;
+  setText('eqPct', (isNum(w) ? w : dash) + ' % cổ phiếu');
+  setText('cashPct', (isNum(w) ? 100 - w : dash) + ' % tiền mặt');
+  $('eqBar').style.width = eq + '%';
+
+  const notes = $('wNotes');
+  clear(notes);
+  const all = [`Tỷ trọng thô từ vùng F&G ${fmt(d.score)}: ${fmt(E.zoneWeight(d.score), 0)}%.`]
+    .concat(v.weightNotes || []);
+  if (profile !== 'balanced') {
+    all.push(`Hồ sơ ${E.PROFILES[profile].label}: nhân ${E.PROFILES[profile].mult}× và giới hạn trần ${E.PROFILES[profile].cap}%.`);
+  }
+  all.forEach(n => notes.appendChild(el('li', null, n)));
+}
+
+function statBox(label, value, sub) {
+  const box = document.createElement('div');
+  box.appendChild(el('div', 't', label));
+  box.appendChild(el('b', null, value));
+  if (sub) box.appendChild(el('div', 't', sub));
+  return box;
+}
+
+function renderBacktest(d) {
+  const bt = d.backtest;
+  if (!bt) return;
+  const curve = bt.curve || [];
+  if (curve.length) {
+    mountChart('btChart', {
+      type: 'line',
+      data: {
+        labels: curve.map(x => x.d),
+        datasets: [
+          { label: 'Chiến lược', data: curve.map(x => x.s), borderColor: '#0891b2', borderWidth: 1.8, tension: .2, fill: false },
+          { label: 'Mua & giữ', data: curve.map(x => x.b), borderColor: '#0b1220', borderWidth: 1.2, tension: .2, fill: false, borderDash: [3, 3] },
+          { label: `Cố định ${fmt(bt.matchedWeight, 0)}% (cùng tỷ trọng TB)`, data: curve.map(x => x.f), borderColor: '#b4442c', borderWidth: 1.4, tension: .2, fill: false, borderDash: [5, 3] },
+        ],
+      },
+      options: {
+        ...BASE_CHART,
+        plugins: {
+          legend: { display: true, labels: { boxWidth: 10, font: { family: 'IBM Plex Mono', size: 10 }, color: '#5b6b7c' } },
+          tooltip: { callbacks: { label: c => `${c.dataset.label}: ${fmt(c.parsed.y, 2)}×` } },
+        },
+        scales: { x: { ...AXIS, ticks: { ...AXIS.ticks, maxTicksLimit: 7 } }, y: AXIS },
+      },
+    });
+  }
+
+  const f = bt.full || {};
+
+  // The honest headline: strategy vs a fixed weight holding the same average
+  // amount of equity. That comparison isolates the timing decision, and it is
+  // the one that decides the confidence ceiling elsewhere on the page.
+  const verdictNote = $('btVerdict');
+  if (verdictNote && f.strat && f.matched) {
+    const edge = isNum(f.strat.total) && isNum(f.matched.total) ? f.strat.total - f.matched.total : null;
+    if (isNum(edge)) {
+      verdictNote.className = 'note ' + (edge > 0 ? '' : 'warn');
+      verdictNote.textContent = edge > 0
+        ? `Kết quả: quy tắc định thời điểm theo F&G VƯỢT danh mục cố định cùng tỷ trọng trung bình ${fmt(bt.matchedWeight, 0)}% là ${fmtSigned(edge)} điểm phần trăm trong mẫu này. Vẫn nên đọc kèm phần chia đôi mẫu bên dưới.`
+        : `Kết quả trung thực: quy tắc định thời điểm theo F&G THUA danh mục cố định cùng tỷ trọng trung bình ${fmt(bt.matchedWeight, 0)}% tới ${fmt(Math.abs(edge), 1)} điểm phần trăm, và thua mua-giữ ${fmt(Math.abs((f.strat.total || 0) - (f.bench.total || 0)), 1)} điểm. Nói cách khác: trong dữ liệu hiện có, việc dùng chỉ số này để tăng/giảm tỷ trọng KHÔNG tạo thêm giá trị — phần lớn chênh lệch đến từ việc giữ tỷ trọng thấp trong một thị trường đi lên. Đây là lý do trần độ tin cậy ở phần kết luận bị giới hạn ở ${(d.verdict.confidence && d.verdict.confidence.ceiling) || '—'}%.`;
+      verdictNote.hidden = false;
+    }
+  }
+
+  const box = $('btStats');
+  clear(box);
+  const rows = [
+    ['Tổng lợi nhuận', 'total', '%'],
+    ['CAGR', 'cagr', '%'],
+    ['Sụt giảm tối đa', 'maxdd', '%'],
+    ['Sharpe', 'sharpe', ''],
+    ['Calmar', 'calmar', ''],
+  ];
+  rows.forEach(([label, key, unit]) => {
+    const s = f.strat ? f.strat[key] : null;
+    const b = f.bench ? f.bench[key] : null;
+    const m = f.matched ? f.matched[key] : null;
+    const show = x => (isNum(x) ? (unit === '%' ? fmtSigned(x) : fmt(x, 2)) + unit : dash);
+    box.appendChild(statBox(label, show(s),
+      `mua & giữ ${show(b)} · cố định ${show(m)}`));
+  });
+  box.appendChild(statBox('Tỷ trọng CP trung bình',
+    isNum(bt.avgExposure) ? fmt(bt.avgExposure, 0) + '%' : dash,
+    'vòng quay ' + (isNum(bt.turnoverPerYear) ? fmt(bt.turnoverPerYear, 1) + '×/năm' : dash)));
+
+  const split = $('btSplit');
+  clear(split);
+  const halves = [['Nửa đầu mẫu', bt.firstHalf], ['Nửa sau mẫu', bt.secondHalf]];
+  halves.forEach(([label, h]) => {
+    if (!h || !h.strat) return;
+    split.appendChild(statBox(label + ' — chiến lược',
+      isNum(h.strat.total) ? fmtSigned(h.strat.total) + '%' : dash,
+      'mua & giữ: ' + (isNum(h.bench && h.bench.total) ? fmtSigned(h.bench.total) + '%' : dash)));
+  });
+  if (bt.splitAt) split.appendChild(statBox('Điểm chia mẫu', bt.splitAt, `${fmtInt(bt.periods)} phiên`));
+
+  setText('btFoot',
+    `Cách tính: tỷ trọng áp cho phiên t là tỷ trọng suy ra từ tín hiệu đóng cửa phiên t−1 (không nhìn trước); phí giao dịch 15 điểm cơ bản tính trên phần tỷ trọng thay đổi; tiền mặt hưởng lãi suất phi rủi ro 4,8%/năm; mọi phép chuẩn hoá chỉ dùng dữ liệu quá khứ. Mốc so sánh "cố định ${fmt(bt.matchedWeight, 0)}%" giữ đúng tỷ trọng cổ phiếu trung bình của chiến lược nhưng KHÔNG định thời điểm — chênh lệch giữa hai đường chính là giá trị thật (hoặc thiệt hại thật) của việc định thời điểm. ` +
+    `Hạn chế phải nói rõ: mẫu chỉ dài ${fmtInt(bt.periods)} phiên và bị chi phối bởi một thị trường tăng giá kéo dài, nên kết quả này chưa đủ để kết luận dứt khoát quy tắc sai — nhưng cũng hoàn toàn không đủ để tin rằng nó đúng. Bộ quy tắc được thiết kế sau khi lịch sử đã xảy ra, vì vậy hãy đối chiếu nửa đầu với nửa sau mẫu: chênh lệch lớn là dấu hiệu tối ưu quá đà.`);
+}
+
+/* ------------------------------------------------------------------ render */
+
+let current = null;
+
+function render(d, mode, meta) {
+  current = d;
+  try {
+    renderHeader(d, mode);
+    renderQuality(d, meta);
+    renderVerdict(d);
+    renderScorePanel(d);
+    renderHistory(d);
+    renderComponents(d);
+    renderBaseRates(d);
+    renderAllocation(d);
+    renderBacktest(d);
+  } catch (err) {
+    showError('Lỗi khi hiển thị dữ liệu: ' + (err && err.message ? err.message : String(err)));
+    if (typeof console !== 'undefined') console.error(err);
+  }
+}
+
+function showError(msg) {
+  const n = $('errNote');
+  n.textContent = msg;
+  n.hidden = false;
+}
+
+function progress(pct) {
+  const bar = $('progress');
+  if (bar) bar.style.width = Math.max(0, Math.min(100, pct)) + '%';
+}
+
+/* --------------------------------------------------------------- controls */
+
+$('brChips').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-h]');
+  if (!btn) return;
+  brHorizon = Number(btn.dataset.h);
+  [...$('brChips').children].forEach(c => c.classList.toggle('on', c === btn));
+  if (current) renderBaseRates(current);
+});
+
+$('profChips').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-p]');
+  if (!btn) return;
+  profile = btn.dataset.p;
+  [...$('profChips').children].forEach(c => c.classList.toggle('on', c === btn));
+  if (current) renderAllocation(current);
+});
+
+/* ------------------------------------------------------------------- boot */
+
+(async function boot() {
+  const snap = typeof window !== 'undefined' ? window.SNAPSHOT : null;
+  if (snap) render(snap, 'snapshot', null);
+
+  // Offline/kiosk build: everything is inlined and there is nothing to fetch.
+  // Used by tools/build-standalone.js to produce a single portable file.
+  if (typeof window !== 'undefined' && window.FG_OFFLINE) {
+    progress(0);
+    const s = $('statusBadge');
+    if (s && snap) { s.textContent = 'BẢN OFFLINE'; s.className = 'badge'; }
+    return;
+  }
+
+  progress(5);
+  try {
+    const { data, meta } = await D.fetchAll((msg, pct) => {
+      progress(pct);
+      const s = $('statusBadge');
+      if (s) { s.textContent = msg; s.className = 'badge'; }
+    });
+    progress(92);
+    const live = E.compute(data);
+    render(live, 'live', meta);
+    progress(100);
+    setTimeout(() => progress(0), 600);
+  } catch (err) {
+    progress(0);
+    const msg = err && err.message ? err.message : String(err);
+    showError(snap
+      ? `Không tải được dữ liệu trực tiếp (${msg}). Đang hiển thị bản snapshot ngày ${snap.updated}. Số liệu có thể đã cũ — hãy tải lại trang sau ít phút.`
+      : `Không tải được dữ liệu trực tiếp và không có bản snapshot dự phòng (${msg}). Nếu bạn đang mở file bằng file://, hãy chạy qua một web server hoặc deploy lên Vercel để dùng proxy nội bộ.`);
+    if (!snap) {
+      setText('vTitle', 'KHÔNG CÓ DỮ LIỆU');
+      setText('vGist', 'Không thể đưa ra kết luận khi chưa tải được dữ liệu thị trường. Không hành động dựa trên trang này lúc này.');
+      const s = $('statusBadge');
+      if (s) { s.textContent = 'LỖI'; s.className = 'badge stale'; }
+    }
+    if (typeof console !== 'undefined') console.error(err);
+  }
+})();
+
+})(window.FGEngine, window.FGData);
+
+</script>
+</body>
+</html>
