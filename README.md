@@ -13,10 +13,11 @@ index.html              Giao diện + style, không chứa logic tính toán
 assets/engine.js        Toàn bộ phần tính toán. Thuần hàm, không DOM, không network.
 assets/data.js          Tầng fetch: timeout, retry, giới hạn đồng thời, đếm lỗi
 assets/ui.js            Tầng render. Mọi chuỗi động đi qua textContent
-assets/snapshot.js      Dữ liệu dự phòng nhúng sẵn (sinh tự động)
 api/chart.js            Serverless proxy tới DNSE/Entrade (né CORS + cache CDN)
-tools/build-snapshot.js Sinh lại snapshot bằng CHÍNH engine.js
-tools/test-engine.js    112+ unit test cho phần tính toán
+tools/build-snapshot.js Tính một lần ra dist/snapshot.js (chỉ cho bản offline + CI)
+tools/build-standalone.js Gộp tất cả thành 1 file HTML chạy offline
+tools/test-engine.js    112 unit test cho phần tính toán
+tools/test-render.js    83 test render, dùng DOM shim tự viết (không cần jsdom)
 fixtures/               Dữ liệu thật đã lưu, dùng cho test offline
 ```
 
@@ -25,11 +26,21 @@ Chạy thử:
 ```bash
 npx serve .                      # hoặc: python3 -m http.server
 node tools/test-engine.js        # chạy test
-node tools/build-snapshot.js     # sinh lại assets/snapshot.js từ dữ liệu live
+node tools/build-snapshot.js     # tính từ dữ liệu live, ghi ra dist/snapshot.js
 node tools/build-snapshot.js --fixtures ./fixtures --dry-run   # chạy offline
 ```
 
 Deploy: push lên Vercel. `api/chart.js` tự động thành serverless function; phần còn lại là static.
+
+**Bắt buộc phải có Vercel (hoặc host chạy được serverless).** Entrade không gửi header CORS — đã kiểm tra thực tế từ một origin `github.io`, kết quả `Failed to fetch`. Nên host tĩnh thuần (GitHub Pages, S3) **không thể** dùng được: trình duyệt sẽ bị chặn khi gọi API trực tiếp. Nếu cần một file chạy offline, dùng `npm run standalone:full`.
+
+## Không có dữ liệu dự phòng — có chủ đích
+
+Trang luôn tính từ API, hoặc báo lỗi. Không nhúng snapshot nào vào trang.
+
+Lý do: một con số cũ trông giống hệt một con số mới. Bản trước từng nhúng snapshot 100KB, và khi API lỗi thì người dùng vẫn thấy một kết luận trông rất tự tin — của phiên nào thì không rõ. Với một trang mà đầu ra là "nên mua hay nên chờ", đó là chế độ lỗi nguy hiểm nhất có thể có.
+
+Thay vào đó: fetch lỗi → banner lỗi + nút thử lại, phần kết luận bị xoá trắng. `.github/workflows/health.yml` chạy pipeline thật mỗi ngày giao dịch và fail ầm ĩ nếu API chết, để bạn biết trước người dùng.
 
 ---
 
@@ -90,7 +101,19 @@ Trên dữ liệu thật **2022-09-19 → 2026-07-24 (958 phiên, đủ 7/7 thà
 
 Vì sao vẫn công bố? Vì đây là con số thật sau khi loại bỏ lỗi nhìn trước (look-ahead) mà phiên bản trước mắc phải. Một backtest đẹp nhờ rò rỉ dữ liệu tương lai còn nguy hiểm hơn một backtest xấu nhưng trung thực.
 
-**Nói công bằng cho quy tắc:** 3,9 năm dữ liệu, bị chi phối bởi một thị trường tăng kéo dài (VN-Index ~1.200 → ~1.900). Trong bối cảnh đó gần như mọi quy tắc giảm tỷ trọng đều thua. Mẫu này **không đủ để kết luận quy tắc sai** — nhưng cũng hoàn toàn không đủ để tin rằng nó đúng. Đó chính xác là lý do độ tin cậy bị chặn trần thay vì bị xoá bỏ.
+**Trên mẫu dài hơn thì còn tệ hơn.** Bản live fetch sâu hơn fixtures — **1.139 phiên từ 2021-12-27**, tức bao gồm cả thị trường giảm 2022:
+
+| | Chiến lược | Mua & giữ | Cố định 60% |
+|---|---|---|---|
+| Tổng | **−15,8%** | +14,5% | +20,9% |
+| Nửa đầu mẫu | −21,7% | −15,5% | — |
+| Nửa sau mẫu | +6,6% | +33,5% | — |
+
+Điều này xoá bỏ lời biện hộ "chỉ tại mẫu toàn thị trường tăng": nửa đầu mẫu là thị trường **giảm** (mua & giữ −15,5%) mà quy tắc vẫn lỗ nặng hơn (−21,7%). Nó thua ở cả hai chế độ thị trường, ở cả hai nửa mẫu.
+
+Tỷ lệ cơ sở cũng xác nhận: vùng `< 20` có **n=34, trung vị −1,9%, chỉ 47% phiên dương** — vùng sợ hãi nhất lại là vùng *tệ nhất*, còn `> 70` (tham lam cực độ) cho +3,1% / 69%. Không có lợi thế contrarian đơn điệu nào trong dữ liệu Việt Nam từ 2021.
+
+Mẫu vẫn ngắn (chưa có 2018, 2008) nên chưa thể kết luận tuyệt đối. Nhưng gánh nặng chứng minh thuộc về quy tắc, và nó chưa chứng minh được gì.
 
 **Nên dùng chỉ số này để làm gì:** như một cái phanh cảm xúc — biết thị trường đang ở đâu trong phổ tâm lý, và không bán tháo cùng đám đông. Không nên dùng như một cỗ máy định thời điểm.
 
@@ -121,7 +144,8 @@ Vì sao vẫn công bố? Vì đây là con số thật sau khi loại bỏ lỗ
 13. **`vercel.json` rewrite chết** — `/chart-api/:path*` không bao giờ được gọi. Đã thay bằng cấu hình header thật.
 14. **Proxy mở** — regex `^[A-Z0-9]+$` cho phép relay ký hiệu bất kỳ. Nay dùng allowlist, có timeout và retry.
 15. **`compute.py` không tồn tại** — mọi comment đều ghi "mirror compute.py" nhưng file không có trong repo, nên snapshot không thể sinh lại và hai bản cài đặt có thể trôi khỏi nhau lúc nào không biết. Nay `tools/build-snapshot.js` dùng **chính `engine.js`** — không thể lệch nhau về mặt cấu trúc.
-16. **Snapshot 100KB một dòng** — mọi diff git đều vô dụng. Nay đã lược bỏ mảng thô.
+16. **Snapshot 100KB một dòng** — mọi diff git đều vô dụng. Nay **bỏ hẳn snapshot khỏi trang**: luôn tính trực tiếp, lỗi thì báo lỗi. Xem mục "Không có dữ liệu dự phòng" ở trên.
+17. **Canvas phình vô hạn** — `<canvas height="210">` kèm `maintainAspectRatio:false` khiến Chart.js đo chính phần tử nó đang resize: mỗi lần vẽ lại canvas cao thêm, tới ~3.300px thì Chrome bỏ không render. Biểu đồ trắng trơn và **trang cuộn xuống vô tận**, không có lỗi nào trong console. Nay chiều cao nằm ở `div.chartbox`, canvas không mang thuộc tính height, sparkline dùng bitmap cố định + `responsive:false`. Có test chặn hồi quy.
 
 ---
 

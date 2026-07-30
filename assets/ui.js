@@ -91,18 +91,21 @@ function renderGauge(score) {
   }
 
   if (!isNum(score)) return;
+
+  // The pointer lives inside the coloured band only — it never crosses the
+  // dial hole, so it cannot collide with the score readout at any width.
   const a = ang(Math.max(0, Math.min(100, score)));
-  const [nx, ny] = pt(rOuter - 6, a);
-  const [bx1, by1] = pt(9, a - Math.PI / 2);
-  const [bx2, by2] = pt(9, a + Math.PI / 2);
+  const [tipX, tipY] = pt(rOuter - 7, a);
+  const rBase = rInner + 4;
+  const [b1x, b1y] = pt(rBase, a - 0.055);
+  const [b2x, b2y] = pt(rBase, a + 0.055);
   const needle = document.createElementNS(NS, 'path');
-  needle.setAttribute('d', `M${bx1},${by1} L${nx},${ny} L${bx2},${by2} Z`);
-  needle.setAttribute('fill', '#0b1220');
+  needle.setAttribute('d', `M${b1x},${b1y} L${tipX},${tipY} L${b2x},${b2y} Z`);
+  needle.setAttribute('fill', '#fff');
+  needle.setAttribute('stroke', '#0b1220');
+  needle.setAttribute('stroke-width', '2.5');
+  needle.setAttribute('stroke-linejoin', 'round');
   svg.appendChild(needle);
-  const hub = document.createElementNS(NS, 'circle');
-  hub.setAttribute('cx', cx); hub.setAttribute('cy', cy); hub.setAttribute('r', 9);
-  hub.setAttribute('fill', '#fff'); hub.setAttribute('stroke', '#0b1220'); hub.setAttribute('stroke-width', '3');
-  svg.appendChild(hub);
 }
 
 /* ------------------------------------------------------------- the verdict */
@@ -236,13 +239,15 @@ function renderHeader(d, mode) {
 
   const status = $('statusBadge');
   const ageDays = d.updated ? (Date.now() - Date.parse(d.updated + 'T00:00:00Z')) / 86400000 : Infinity;
-  const stale = ageDays > 5;
-  if (mode === 'live' && !stale) { status.textContent = 'LIVE'; status.className = 'badge live'; }
-  else if (stale) { status.textContent = 'DỮ LIỆU CŨ'; status.className = 'badge stale'; }
-  else { status.textContent = 'SNAPSHOT'; status.className = 'badge'; }
+  // 8 days, not 5: Tet and other clustered holidays legitimately close the
+  // exchange for over a week, and flagging that as a problem trains people to
+  // ignore the badge.
+  if (mode === 'offline') { status.textContent = 'BẢN OFFLINE'; status.className = 'badge'; }
+  else if (ageDays > 8) { status.textContent = 'PHIÊN GẦN NHẤT ' + d.updated; status.className = 'badge stale'; }
+  else { status.textContent = 'LIVE'; status.className = 'badge live'; }
 
-  setText('footLeft', 'Cập nhật ' + (d.updated || dash) + ' · ' +
-    (mode === 'live' ? 'tính trực tiếp trên trình duyệt' : 'bản nhúng sẵn'));
+  setText('footLeft', 'Phiên gần nhất ' + (d.updated || dash) + ' · ' +
+    (mode === 'offline' ? 'bản nhúng sẵn, không kết nối' : 'tính trực tiếp trên trình duyệt'));
 }
 
 function renderQuality(d, meta) {
@@ -367,9 +372,14 @@ function renderComponents(d) {
     const sc = el('div', 'score', fmt(c.score));
     sc.style.color = c.available === false ? '#8fa0b3' : zoneColor(c.score);
     row.appendChild(sc);
+    // Fixed-size bitmap + responsive:false. A responsive sparkline inside a
+    // flex row has no stable parent height to measure, which is what made the
+    // big charts grow without bound.
     const cv = document.createElement('canvas');
     cv.className = 'spark';
     cv.id = 'spark-' + c.id;
+    cv.width = 300;
+    cv.height = 80;
     row.appendChild(cv);
     box.appendChild(row);
 
@@ -397,6 +407,8 @@ function renderComponents(d) {
       },
       options: {
         ...BASE_CHART,
+        responsive: false,
+        animation: false,
         plugins: { legend: { display: false }, tooltip: { enabled: false } },
         scales: { x: { display: false }, y: { display: false, min: 0, max: 100 } },
       },
@@ -593,9 +605,10 @@ function render(d, mode, meta) {
 
 function showError(msg) {
   const n = $('errNote');
-  n.textContent = msg;
+  setText('errText', msg);
   n.hidden = false;
 }
+function hideError() { $('errNote').hidden = true; }
 
 function progress(pct) {
   const bar = $('progress');
@@ -622,59 +635,51 @@ $('profChips').addEventListener('click', e => {
 
 /* ------------------------------------------------------------------- boot */
 
-(async function boot() {
-  const snap = typeof window !== 'undefined' ? window.SNAPSHOT : null;
-  if (snap) render(snap, 'snapshot', null);
-
-  // Snapshot-only mode. Two situations need it:
-  //   1. tools/build-standalone.js bundles everything into one portable file
-  //   2. a static host (GitHub Pages, S3) has no serverless function to proxy
-  //      through, and Entrade sends no Access-Control-Allow-Origin, so a direct
-  //      browser fetch is blocked. Attempting it there only produces a scary
-  //      error banner on every load; better to render the snapshot and say so.
-  if (typeof window !== 'undefined' && (window.FG_OFFLINE || window.FG_SNAPSHOT_ONLY)) {
-    progress(0);
-    const s = $('statusBadge');
-    if (s && snap) {
-      s.textContent = window.FG_OFFLINE ? 'BẢN OFFLINE' : 'SNAPSHOT HÀNG NGÀY';
-      s.className = 'badge';
-    }
-    const ageDays = snap && snap.updated
-      ? (Date.now() - Date.parse(snap.updated + 'T00:00:00Z')) / 86400000 : Infinity;
-    if (snap && ageDays > 5) {
-      const n = $('qualityNote');
-      n.textContent = `Bản snapshot này tính ngày ${snap.updated}, đã quá 5 ngày. Nếu bạn cần số liệu của phiên gần nhất, hãy dùng bản deploy có proxy (Vercel) thay vì host tĩnh.`;
-      n.hidden = false;
-    }
-    return;
-  }
-
+/**
+ * There is deliberately no embedded snapshot. Either the page shows numbers it
+ * computed from the live feed moments ago, or it shows nothing and says why.
+ * A stale fallback that looks identical to live data is worse than an error:
+ * it invites someone to act on last week's market.
+ *
+ * The one exception is the portable bundle from tools/build-standalone.js,
+ * which injects window.SNAPSHOT and window.FG_OFFLINE and is clearly labelled.
+ */
+async function load() {
+  hideError();
   progress(5);
+  const badge = $('statusBadge');
+  if (badge) { badge.textContent = 'Đang tải…'; badge.className = 'badge'; }
+
   try {
     const { data, meta } = await D.fetchAll((msg, pct) => {
       progress(pct);
-      const s = $('statusBadge');
-      if (s) { s.textContent = msg; s.className = 'badge'; }
+      if (badge) { badge.textContent = msg; badge.className = 'badge'; }
     });
     progress(92);
-    const live = E.compute(data);
-    render(live, 'live', meta);
+    render(E.compute(data), 'live', meta);
     progress(100);
     setTimeout(() => progress(0), 600);
   } catch (err) {
     progress(0);
     const msg = err && err.message ? err.message : String(err);
-    showError(snap
-      ? `Không tải được dữ liệu trực tiếp (${msg}). Đang hiển thị bản snapshot ngày ${snap.updated}. Số liệu có thể đã cũ — hãy tải lại trang sau ít phút.`
-      : `Không tải được dữ liệu trực tiếp và không có bản snapshot dự phòng (${msg}). Nếu bạn đang mở file bằng file://, hãy chạy qua một web server hoặc deploy lên Vercel để dùng proxy nội bộ.`);
-    if (!snap) {
-      setText('vTitle', 'KHÔNG CÓ DỮ LIỆU');
-      setText('vGist', 'Không thể đưa ra kết luận khi chưa tải được dữ liệu thị trường. Không hành động dựa trên trang này lúc này.');
-      const s = $('statusBadge');
-      if (s) { s.textContent = 'LỖI'; s.className = 'badge stale'; }
-    }
+    showError(`Không tải được dữ liệu thị trường: ${msg}. Trang này không có bản dự phòng — sẽ không hiển thị số liệu cũ để tránh gây nhầm lẫn.`);
+    setText('vTitle', 'CHƯA CÓ DỮ LIỆU');
+    setText('vGist', 'Không thể đưa ra kết luận khi chưa tải được dữ liệu thị trường. Đừng hành động dựa trên trang này lúc này.');
+    if (badge) { badge.textContent = 'LỖI'; badge.className = 'badge stale'; }
     if (typeof console !== 'undefined') console.error(err);
   }
+}
+
+const retry = $('retryBtn');
+if (retry) retry.addEventListener('click', () => load());
+
+(function boot() {
+  if (typeof window !== 'undefined' && window.FG_OFFLINE && window.SNAPSHOT) {
+    render(window.SNAPSHOT, 'offline', null);
+    progress(0);
+    return;
+  }
+  load();
 })();
 
 })(window.FGEngine, window.FGData);

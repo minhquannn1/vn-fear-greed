@@ -125,9 +125,20 @@
   .lede{font-size:13.5px;color:var(--muted);max-width:78ch;margin-bottom:14px}
 
   .gaugebox{display:flex;flex-direction:column;align-items:center}
-  .gauge-svg{width:100%;max-width:380px;display:block}
-  .score-big{font-size:56px;font-weight:600;margin-top:-84px;line-height:1}
-  .score-label{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.2em;margin-top:5px;color:var(--cyan)}
+  /* The readout is absolutely positioned as a PERCENTAGE of the gauge box, so
+     it stays centred in the dial hole at every width. Negative margins drifted
+     into the needle on narrow screens. */
+  .gaugewrap{position:relative;width:100%;max-width:380px}
+  .gauge-svg{width:100%;display:block}
+  .score-overlay{position:absolute;left:0;right:0;top:63%;transform:translateY(-50%);
+    text-align:center;pointer-events:none}
+  .score-big{font-size:clamp(38px,13vw,54px);font-weight:600;line-height:1}
+  .score-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.16em;margin-top:4px;color:var(--cyan)}
+  /* Chart.js with maintainAspectRatio:false sizes itself to its PARENT. The
+     parent must therefore own the height and the canvas must not, or the two
+     feed each other and the canvas grows without bound. */
+  .chartbox{position:relative;width:100%}
+  .chartbox canvas{display:block}
   .prevrow{display:flex;gap:18px;margin-top:22px;flex-wrap:wrap;justify-content:center}
   .prev{border-left:2px solid var(--line);padding-left:9px;min-width:78px}
   .prev .t{font-size:9.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.07em}
@@ -208,7 +219,10 @@
     </div>
   </header>
 
-  <div class="note err" id="errNote" hidden></div>
+  <div class="note err" id="errNote" hidden>
+    <span id="errText"></span>
+    <button id="retryBtn" style="margin-left:10px;border:1px solid currentColor;background:transparent;color:inherit;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:12px;padding:4px 11px">Thử lại</button>
+  </div>
   <div class="note warn" id="qualityNote" hidden></div>
 
   <!-- ===================== THE ANSWER ===================== -->
@@ -256,9 +270,13 @@
   <!-- ===================== GAUGE + HISTORY ===================== -->
   <div class="grid" style="border-top:1px solid var(--line);margin-top:26px">
     <div class="panel gaugebox">
-      <svg class="gauge-svg" id="gauge" viewBox="0 0 400 240" role="img" aria-label="Đồng hồ chỉ số sợ hãi và tham lam"></svg>
-      <div class="score-big mono" id="scoreBig">—</div>
-      <div class="score-label" id="scoreLabel">—</div>
+      <div class="gaugewrap">
+        <svg class="gauge-svg" id="gauge" viewBox="0 0 400 240" role="img" aria-label="Đồng hồ chỉ số sợ hãi và tham lam"></svg>
+        <div class="score-overlay">
+          <div class="score-big mono" id="scoreBig">—</div>
+          <div class="score-label" id="scoreLabel">—</div>
+        </div>
+      </div>
       <div class="prevrow">
         <div class="prev"><div class="t">Phiên trước</div><div class="v mono" id="pClose">—</div></div>
         <div class="prev"><div class="t">Tuần trước</div><div class="v mono" id="pWeek">—</div></div>
@@ -275,9 +293,9 @@
     </div>
     <div class="panel">
       <div class="charttitle">Lịch sử chỉ số vs VN-Index</div>
-      <canvas id="histChart" height="210"></canvas>
+      <div class="chartbox" style="height:230px"><canvas id="histChart"></canvas></div>
       <div class="charttitle" style="margin-top:18px">Mức hoảng loạn theo thời gian</div>
-      <canvas id="panicChart" height="90"></canvas>
+      <div class="chartbox" style="height:110px"><canvas id="panicChart"></canvas></div>
     </div>
   </div>
 
@@ -327,7 +345,7 @@
 
     <div class="charttitle" style="margin-top:22px">Kiểm định trung thực: quy tắc này có thật sự hiệu quả không?</div>
     <div class="note warn" id="btVerdict" hidden style="margin-top:0;margin-bottom:12px"></div>
-    <canvas id="btChart" height="150"></canvas>
+    <div class="chartbox" style="height:190px"><canvas id="btChart"></canvas></div>
     <div class="kv" id="btStats"></div>
     <div class="charttitle" style="margin-top:18px">Chia đôi mẫu — kiểm tra tính ổn định</div>
     <div class="kv" id="btSplit"></div>
@@ -370,7 +388,9 @@
       <p>Vì các cửa sổ chồng lấn nhau: mỗi phiên trong cùng một vùng đều được tính một lần, mà các phiên liền kề thì gần như trùng nhau. 200 phiên quan sát <b>không</b> tương đương 200 lần thử độc lập — có thể chỉ là 5–10 đợt thị trường thật sự. Hãy đọc cột “số phiên” như một chỉ báo về độ dày dữ liệu, không phải cỡ mẫu thống kê.</p></details>
 
     <details><summary>Cập nhật bao lâu một lần? Nếu mất kết nối thì sao?</summary>
-      <p>Mỗi lần mở trang, toàn bộ chỉ số được tính lại từ dữ liệu mới nhất của API công khai (DNSE/Entrade) — badge <b>LIVE</b> nghĩa là bạn đang xem số realtime của phiên gần nhất. Nếu không kết nối được, trang hiển thị bản snapshot đã nhúng kèm cảnh báo rõ ràng, và nếu dữ liệu quá 5 ngày sẽ có badge <b>DỮ LIỆU CŨ</b>. Nếu một số cổ phiếu VN30 tải lỗi, trang sẽ báo còn bao nhiêu thành phần hợp lệ thay vì âm thầm tính tiếp.</p></details>
+      <p>Mỗi lần mở trang, toàn bộ chỉ số được tính lại từ đầu bằng dữ liệu mới nhất của API công khai (DNSE/Entrade) — badge <b>LIVE</b> nghĩa là bạn đang xem số của phiên gần nhất, tính ngay trên trình duyệt của bạn.</p>
+      <p>Trang này <b>không có bản dữ liệu dự phòng nhúng sẵn</b>. Đây là lựa chọn có chủ đích: một con số cũ trông y hệt một con số mới, và không có gì tệ hơn việc ra quyết định dựa trên thị trường của tuần trước mà không biết. Nếu không tải được dữ liệu, trang sẽ báo lỗi rõ ràng kèm nút thử lại, và không hiển thị bất kỳ số liệu nào.</p>
+      <p>Nếu một số cổ phiếu VN30 tải lỗi, trang báo còn bao nhiêu thành phần hợp lệ thay vì âm thầm tính tiếp — và độ tin cậy sẽ tự động giảm theo. Dưới 5/7 thành phần thì trang từ chối đưa ra con số.</p></details>
 
     <details><summary>Tôi nên dùng chỉ số này như thế nào?</summary>
       <p>Như một cái phanh cảm xúc, không phải một cái máy in tiền. Giá trị lớn nhất của nó là ép bạn mua khi bản năng bảo bán, và ngừng mua khi bản năng bảo mua thêm. Kế hoạch chia lô tồn tại để bạn không dồn toàn bộ tiền vào một phiên và không bỏ lỡ hoàn toàn nếu đáy đã qua.</p>
@@ -391,15 +411,12 @@
   </footer>
 </div>
 
-<!-- Static hosts (GitHub Pages, S3, Netlify without functions) have no
-     /api/chart proxy, and Entrade sends no CORS header, so a direct browser
-     fetch is blocked. Uncomment the line below on those hosts to render from
-     the daily snapshot instead of failing on every load.
-     On Vercel, leave it commented — the proxy makes live compute work. -->
-<!-- <script>window.FG_SNAPSHOT_ONLY = true;</script> -->
+<!-- No embedded snapshot: the page always computes from live data.
+     Requires a host that can run api/chart.js (Vercel). A purely static host
+     cannot work — Entrade sends no CORS header, so a direct browser fetch is
+     blocked. Use `node tools/build-standalone.js` if you need a portable file. -->
 <script src="assets/engine.js"></script>
 <script src="assets/data.js"></script>
-<script src="assets/snapshot.js"></script>
 <script src="assets/ui.js"></script>
 </body>
 </html>

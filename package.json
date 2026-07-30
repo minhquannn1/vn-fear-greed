@@ -7,6 +7,7 @@
   "scripts": {
     "test": "node tools/test-engine.js && node tools/test-render.js",
     "snapshot": "node tools/build-snapshot.js",
+    "standalone:full": "node tools/build-snapshot.js && node tools/build-standalone.js",
     "snapshot:offline": "node tools/build-snapshot.js --fixtures ./fixtures --dry-run",
     "standalone": "node tools/build-standalone.js",
     "dev": "npx --yes serve ."

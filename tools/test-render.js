@@ -156,10 +156,18 @@ const rd = f => JSON.parse(fs.readFileSync(path.join(ROOT, 'fixtures', f), 'utf8
 const stocks = E.VN30.map(s => [s, rd(`stocks/${s}.json`)]);
 const REAL = E.compute({ vni: rd('vnindex.json'), vn30: rd('vn30.json'), fut: rd('vn30f1m.json'), stocks });
 
-global.SNAPSHOT = REAL;
+// No embedded snapshot exists any more. The page renders from a live fetch, so
+// the test stubs the fetch and returns the saved fixtures — exercising exactly
+// the code path a real visitor hits.
 let fetchCalled = false;
 global.FGData = {
-  fetchAll: async () => { fetchCalled = true; throw new Error('network disabled in test'); },
+  fetchAll: async () => {
+    fetchCalled = true;
+    return {
+      data: { vni: rd('vnindex.json'), vn30: rd('vn30.json'), fut: rd('vn30f1m.json'), stocks },
+      meta: { base: 'proxy', stocksOk: 30, stocksTotal: 30, stocksFailed: [], vn30Ok: true, futOk: true },
+    };
+  },
 };
 
 // ui.js logs the (expected) fetch rejection; keep the test output readable.
@@ -179,6 +187,67 @@ group('markup / renderer id contract');
   ok('index.html has no duplicate ids',
     new Set(htmlIds).size === htmlIds.length,
     htmlIds.filter((x, i) => htmlIds.indexOf(x) !== i).join(', '));
+}
+
+group('canvas sizing — guards against the runaway-canvas bug');
+{
+  // Chart.js with maintainAspectRatio:false measures its PARENT. If the canvas
+  // itself carries a height, the two feed each other and the canvas grows every
+  // frame until the browser refuses to paint it (observed: 3334px tall, blank).
+  // Height must live on a fixed-height wrapper; the canvas must carry none.
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const canvases = [...html.matchAll(/<canvas\b[^>]*>/g)].map(m => m[0]);
+  ok('index.html declares the expected canvases', canvases.length === 3, String(canvases.length));
+  ok('no canvas carries a height attribute',
+    canvases.every(c => !/\bheight\s*=/.test(c)),
+    canvases.filter(c => /\bheight\s*=/.test(c)).join(' '));
+  ok('no canvas carries a width attribute',
+    canvases.every(c => !/\bwidth\s*=/.test(c)));
+
+  const boxes = [...html.matchAll(/<div class="chartbox"[^>]*style="[^"]*height:\s*\d+px[^"]*"[^>]*>\s*<canvas/g)];
+  ok('every canvas sits in a chartbox with an explicit pixel height',
+    boxes.length === canvases.length, `${boxes.length} of ${canvases.length}`);
+  ok('chartbox is position:relative in CSS',
+    /\.chartbox\s*\{[^}]*position:\s*relative/.test(html));
+
+  // Sparklines are created in JS; they must opt out of responsive sizing and
+  // ship an explicit bitmap size instead.
+  const uiSrc = fs.readFileSync(path.join(ROOT, 'assets', 'ui.js'), 'utf8');
+  ok('sparkline canvases get an explicit bitmap size',
+    /cv\.width\s*=\s*\d+/.test(uiSrc) && /cv\.height\s*=\s*\d+/.test(uiSrc));
+  ok('sparkline charts disable responsive resizing',
+    /responsive:\s*false/.test(uiSrc));
+}
+
+// The live-fetch path is async, so every DOM assertion runs after it settles.
+setTimeout(() => {
+
+group('live render path');
+{
+  ok('live fetch was attempted', fetchCalled);
+  ok('no error banner on success', DOC.byId['errNote'].hidden === true);
+  // Fixtures age as the repo sits, so assert the branch that matches their age
+  // rather than hard-coding LIVE.
+  const ageDays = (Date.now() - Date.parse(REAL.updated + 'T00:00:00Z')) / 86400000;
+  const expectBadge = ageDays > 8 ? 'PHIÊN GẦN NHẤT ' + REAL.updated : 'LIVE';
+  ok(`badge reports "${expectBadge}" for ${Math.floor(ageDays)}-day-old data`,
+    txt('statusBadge') === expectBadge, txt('statusBadge'));
+  ok('footer says computed in browser',
+    (txt('footLeft') || '').includes('tính trực tiếp'), txt('footLeft'));
+  ok('retry button exists and is wired',
+    !!DOC.byId['retryBtn'] && (DOC.byId['retryBtn'].listeners.click || []).length === 1);
+}
+
+group('no embedded snapshot ships to visitors');
+{
+  ok('assets/snapshot.js does not exist',
+    !fs.existsSync(path.join(ROOT, 'assets', 'snapshot.js')));
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  ok('index.html does not load a snapshot', !html.includes('snapshot.js'));
+  ok('index.html loads only engine, data and ui',
+    (html.match(/<script src="assets\/[^"]+"><\/script>/g) || []).length === 3);
+  const uiSrc = fs.readFileSync(path.join(ROOT, 'assets', 'ui.js'), 'utf8');
+  ok('ui.js has no snapshot-only host mode', !uiSrc.includes('FG_SNAPSHOT_ONLY'));
 }
 
 group('verdict block rendered from real data');
@@ -278,27 +347,28 @@ group('backtest block — the honest comparison');
     edge > 0 || DOC.byId['btVerdict'].className.includes('warn'));
 }
 
-group('header + status');
+group('header');
 {
   ok('VN-Index badge shows price', /\d/.test(txt('vniBadge')), txt('vniBadge'));
   ok('date badge set', txt('dateBadge') === REAL.updated);
-  ok('stale data flagged (fixture is old by design)',
-    ['DỮ LIỆU CŨ', 'SNAPSHOT', 'LIVE'].includes(txt('statusBadge')), txt('statusBadge'));
 }
 
-group('failure path');
-{
-  ok('live fetch was attempted', fetchCalled);
-  // boot() is async; give the rejected promise a tick to settle
-}
+// Swap in a failing fetch and press retry — exercises load()'s catch path.
+group('failure path shows an error instead of stale numbers');
+DOC.byId['retryBtn'].dispatch('click', { target: DOC.byId['retryBtn'] });
+global.FGData.fetchAll = async () => { throw new Error('upstream down'); };
+DOC.byId['retryBtn'].dispatch('click', { target: DOC.byId['retryBtn'] });
 
 setTimeout(() => {
-  group('failure path (after async settle)');
   {
-    ok('error note is shown when live fetch fails', DOC.byId['errNote'].hidden === false);
-    ok('error mentions the snapshot fallback',
-      (txt('errNote') || '').includes('snapshot'), txt('errNote'));
-    ok('snapshot data still on screen', txt('vTitle') === REAL.verdict.title);
+    ok('error banner is shown', DOC.byId['errNote'].hidden === false);
+    ok('error names the cause', (txt('errText') || '').includes('upstream down'), txt('errText'));
+    ok('error states there is no fallback',
+      (txt('errText') || '').includes('không có bản dự phòng'), txt('errText'));
+    ok('verdict is blanked rather than left showing old data',
+      txt('vTitle') === 'CHƯA CÓ DỮ LIỆU', txt('vTitle'));
+    ok('gist warns against acting', (txt('vGist') || '').includes('Đừng hành động'));
+    ok('badge shows an error state', txt('statusBadge') === 'LỖI', txt('statusBadge'));
     ok('progress bar reset', DOC.byId['progress'].style.width === '0%');
   }
 
@@ -343,4 +413,6 @@ setTimeout(() => {
   console.log('\n' + '─'.repeat(52));
   console.log(`${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
+}, 80);
+
 }, 50);

@@ -1,0 +1,37 @@
+name: Data health check
+
+# The site has no embedded snapshot — if the upstream API breaks, the page shows
+# an error instead of quietly serving stale numbers. That is the right behaviour
+# for visitors, but it means nobody tells YOU when it breaks. This job runs the
+# real pipeline against live data every trading day and fails loudly (GitHub
+# emails you on failure) so an outage is not discovered by a user.
+#
+# Nothing is committed. No snapshot is served from this repo.
+on:
+  schedule:
+    - cron: '30 9 * * 1-5'   # 16:30 ICT, after the VN close
+  workflow_dispatch:
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Engine + render tests
+        run: npm test
+
+      - name: Compute from live API (fails if upstream is broken)
+        run: node tools/build-snapshot.js --dry-run
+
+      - name: Verify the deployed site is serving live data
+        run: |
+          set -euo pipefail
+          URL="https://vn-fear-greed.vercel.app/api/chart?kind=index&symbol=VNINDEX&resolution=1D&from=1784600000&to=$(date +%s)"
+          echo "GET $URL"
+          BODY=$(curl -fsS --max-time 20 "$URL")
+          BARS=$(node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const j=JSON.parse(s);if(!Array.isArray(j.t)||j.t.length<3){console.error("too few bars");process.exit(1)}console.log(j.t.length)})' <<< "$BODY")
+          echo "proxy returned $BARS bars"

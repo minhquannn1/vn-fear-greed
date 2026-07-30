@@ -26,7 +26,7 @@ const read = p => fs.readFileSync(path.join(ROOT, p), 'utf8');
 let html = read('index.html');
 const engine = read('assets/engine.js');
 const ui = read('assets/ui.js');
-let snapshot = read('assets/snapshot.js');
+let snapshot = read('dist/snapshot.js');
 
 if (slim) {
   // Trim the long series so the bundle stays small enough to embed elsewhere.
